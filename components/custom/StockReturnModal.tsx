@@ -18,6 +18,8 @@ import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutDissApiSlic
 import Select from '../bootstrap/forms/Select';
 import Checks, { ChecksGroup } from '../bootstrap/forms/Checks';
 import { saveReturnData1, updateQuantity1 } from '../../service/returnAccesory';
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { firestore } from '../../firebaseConfig';
 
 interface StockAddModalProps {
 	id: string;
@@ -63,17 +65,43 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		printlable: 0,
 	});
 	const { data: itemDiss } = useGetItemDissQuery(undefined);
-	const [addstockIn, { isLoading }] = useAddStockInMutation();
-	const { data: StockInOuts } = useGetStockInOutsQuery(undefined);
-	const [updateStockInOut] = useUpdateStockInOutMutation();
+	// const { data: StockInOuts } = useGetStockInOutsQuery(undefined);
 	const { refetch } = useGetItemDissQuery(undefined);
-
-	const [generatedCode, setGeneratedCode] = useState('');
-	const [generatedbarcode, setGeneratedBarcode] = useState<any>();
-	const nowQuantity = quantity;
-	const [selectedCategory, setSelectedCategory] = useState<string>('stock in');
 	const [updateSubStockInOut] = useUpdateSubStockInOutMutation();
 	const [condition, setCondition] = useState('');
+
+	 const getStockInsById = async (subStockId: string) => {
+		try {
+		  const stockCollectionRef = collection(firestore, 'Stock');
+		  const q = query(stockCollectionRef, where('barcode', '==', subStockId));
+		  const querySnapshot = await getDocs(q);
+		  const matchingStocks = [];
+		  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	// 	  for (const stockDoc of querySnapshot.docs) {
+	// 		const stockDocId = stockDoc.id;
+			
+	// 		const stockInfo: any = { id: stockDocId, ...stockDoc.data() };
+			
+	// 		// Get the specific subStock document by ID
+	// 		const subStockDocRef = doc(firestore, 'Stock', subStockId, 'subStock', subStockId);
+	// 		const subStockDoc = await getDoc(subStockDocRef);
+	// 		console.log(subStockDoc.data());
+	// 		if (subStockDoc.exists()) {
+	// 		  // If the subStock with the specified ID exists in this stock document
+	// 		  stockInfo.subStock = [{
+	// 			id: subStockDoc.id,
+	// 			...subStockDoc.data()
+	// 		  }];
+	// 		  matchingStocks.push(stockInfo);
+	// 		}
+	// 	  }
+	//   console.log(matchingStocks);
+	// 	  return matchingStocks;
+		} catch (error) {
+		  console.error('Error fetching stock with specific subStock ID:', error);
+		  throw new Error(`Failed to fetch stock with subStock ID: ${subStockId}`);
+		}
+	  };
 
 	const formik = useFormik({
 		initialValues: {
@@ -105,23 +133,20 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					showConfirmButton: false,
 				});
 				try {
+			
+
 					const id = value.itemId?.toString().slice(0, 8) || 'defaultId';
 					const subid = value.itemId.toString();
 
 					const prefix1 = value.itemId?.toString().slice(0, 8);
 
-					const matchedItem = StockInOuts.find(
-						(item: {
-							id: string;
-							// barcode: string;
-							// brand: string;
-							// category: string;
-							// model: string;
-							// code: string;
-							// quantity: string;
-							// description: string;
-						}) => item.id.startsWith(prefix1),
-					);
+					// const matchedItem = StockInOuts.find(
+					// 	(item: {
+					// 		id: string;
+					// 	}) => item.id.startsWith(prefix1),
+					// );
+					console.log(subid);
+					const matchedItem:any = await getStockInsById(id);
 					console.log(matchedItem);
 					if (matchedItem == undefined) {
 						await Swal.fire({
@@ -141,9 +166,9 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					const updatedItem = {
 						condition,
 						barcode: value.itemId,
-						brand: matchedItem.brand,
-						category: matchedItem.category,
-						model: matchedItem.model,
+						brand: matchedItem[0].brand,
+						category: matchedItem[0].category,
+						model: matchedItem[0].model,
 						date: formattedDate,
 					};
 

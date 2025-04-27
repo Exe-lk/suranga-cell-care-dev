@@ -1,9 +1,13 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../bootstrap/Modal';
 import Button from '../bootstrap/Button';
 import Swal from 'sweetalert2';
-import { useDeleteCategoryMutation, useUpdateCategoryMutation, useGetDeleteCategoriesQuery, Category } from '../../redux/slices/categoryApiSlice';
+import {
+	useDeleteCategoryMutation,
+	useUpdateCategoryMutation,
+	useGetDeleteCategoriesQuery,
+} from '../../redux/slices/categoryApiSlice';
 
 interface CategoryEditModalProps {
 	id: string;
@@ -20,11 +24,15 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 }) => {
 	const [deleteCategory] = useDeleteCategoryMutation();
 	const [updateCategory] = useUpdateCategoryMutation();
-	const { data: categories, error, isLoading} = useGetDeleteCategoriesQuery();
+	const { data: categories, error, isLoading, refetch } = useGetDeleteCategoriesQuery(undefined);
 
+	useEffect(() => {
+		if (isOpen && categories) {
+			refetch();
+		}
+	}, [isOpen, categories, refetch]);
 
-
-	const handleClickDelete = async (category: Category) => {
+	const handleClickDelete = async (category: any) => {
 		const confirmation = await Swal.fire({
 			title: 'Are you sure?',
 			text: 'Please type "DELETE" to confirm.',
@@ -46,16 +54,16 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 				.unwrap()
 				.then(() => {
 					Swal.fire('Deleted!', 'The category has been permentaly deleted.', 'success');
-			
+					refetch();
 				})
-				.catch((error: Error) => {
+				.catch((error) => {
 					console.error('Error deleting category:', error);
 					Swal.fire('Error', 'Failed to delete category.', 'error');
 				});
 		}
 	};
 
-	const handleClickRestore = async (category: Category) => {
+	const handleClickRestore = async (category: any) => {
 		if (!categories) {
 			console.error('No categories to restore.');
 			return;
@@ -84,7 +92,7 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 				};
 				await updateCategory(values);
 				Swal.fire('Restored!', 'The category has been restored.', 'success');
-			
+				refetch();
 				refetchMainPage();
 			}
 		} catch (error) {
@@ -94,8 +102,6 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 	};
 
 	const handleDeleteAll = async () => {
-		if (!categories) return;
-		
 		const confirmation = await Swal.fire({
 			title: 'Are you sure?',
 			text: 'Type "DELETE ALL" to confirm deleting all categories.',
@@ -117,13 +123,11 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 				await deleteCategory(category.id).unwrap();
 			}
 			Swal.fire('Deleted!', 'All categories have been permentaly deleted.', 'success');
-	
+			refetch();
 		}
 	};
 
 	const handleRestoreAll = async () => {
-		if (!categories) return;
-		
 		const confirmation = await Swal.fire({
 			title: 'Are you sure?',
 			text: 'Restore all categories?',
@@ -143,7 +147,7 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 				await updateCategory(updatedCategory).unwrap();
 			}
 			Swal.fire('Restored!', 'All categories have been restored.', 'success');
-	
+			refetch();
 			refetchMainPage();
 		}
 	};
@@ -190,8 +194,8 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 						)}
 						{categories &&
 							categories.length > 0 &&
-							categories.map((category: Category) => (
-								<tr key={category.id}>
+							categories.map((category: any, index: any) => (
+								<tr key={index}>
 									<td>{category.name}</td>
 									<td>
 										<Button
@@ -217,7 +221,6 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 		</Modal>
 	);
 };
-
 CategoryEditModal.propTypes = {
 	id: PropTypes.string.isRequired,
 	isOpen: PropTypes.bool.isRequired,

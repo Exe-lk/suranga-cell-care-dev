@@ -362,6 +362,7 @@ import Select from '../bootstrap/forms/Select';
 import Checks, { ChecksGroup } from '../bootstrap/forms/Checks';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 interface StockAddModalProps {
 	id: string;
@@ -427,23 +428,29 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 
 	useEffect(() => {
 		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'Stock');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as any;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setStockInOuts(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
+		  try {
+			const { data, error } = await supabase
+			  .from('Stock')
+			  .select('*');
+	
+			if (error) {
+			  throw error;
 			}
+	
+			// Supabase rows already include their ID
+			const supabaseData = data.map((row) => ({
+			  ...row,
+			  cid: row.id, // If you want to use `cid` like Firebase's doc.id
+			}));
+	
+			setStockInOuts(supabaseData);
+		  } catch (error) {
+			console.error('Error fetching data:', error);
+		  }
 		};
+	
 		fetchData();
-	}, []);
+	  }, []);
 	useEffect(() => {
 		if (isSuccess && stockInData) {
 			setStockIn(stockInData);
@@ -509,9 +516,9 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			if (!values.date) {
 				errors.date = 'Date In is required';
 			}
-			if (!values.suppName) {
-				errors.suppName = 'Supplier Name is required';
-			}
+			// if (!values.suppName) {
+			// 	errors.suppName = 'Supplier Name is required';
+			// }
 			if (!values.cost) {
 				errors.cost = 'Cost is required';
 			}

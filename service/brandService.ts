@@ -1,95 +1,126 @@
-import { firestore } from '../firebaseConfig';
-import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, Timestamp } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 
+// Create brand
 export const createBrand = async (name: string, category: string) => {
-  const status = true;
-  const timestamp = Timestamp.now();
-  const docRef = await addDoc(collection(firestore, 'BrandDisplay'), { name, category, status, timestamp: timestamp });
-  return docRef.id;
+  console.log(name)
+  const { data, error } = await supabase
+    .from('BrandDisplay')
+    .insert([{ name, category, status: true,description:""}])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data.id;
 };
 
+// Get active brands
 export const getBrand = async () => {
-  const q = query(collection(firestore, 'BrandDisplay'), where('status', '==', true));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const { data, error } = await supabase
+    .from('BrandDisplay')
+    .select('*')
+    .eq('status', true);
+
+  if (error) throw error;
+  return data;
 };
 
+// Get deleted brands
 export const getDeleteBrand = async () => {
-  const q = query(collection(firestore, 'BrandDisplay'), where('status', '==', false));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const { data, error } = await supabase
+    .from('BrandDisplay')
+    .select('*')
+    .eq('status', false);
+
+  if (error) throw error;
+  return data;
 };
 
+// Get brand by ID
 export const getBrandById = async (id: string) => {
-  const brandRef = doc(firestore, 'BrandDisplay', id);
-  const brandSnap = await getDoc(brandRef);
-  if (brandSnap.exists()) {
-    return { id: brandSnap.id, ...brandSnap.data() };
-  } else {
-    return null;
+  const { data, error } = await supabase
+    .from('BrandDisplay')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) return null;
+  return data;
+};
+
+// Basic update
+export const updateBrand1 = async (id: string, name: string, category: string, status: boolean) => {
+  const { error } = await supabase
+    .from('BrandDisplay')
+    .update({ name, category, status })
+    .eq('id', id);
+
+  if (error) throw error;
+};
+
+// Full update with references in other tables
+export const updateBrand = async (id: string, name: string, category: string, status: boolean) => {
+
+  const { data: brandDoc, error: brandError } = await supabase
+    .from('BrandDisplay')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (brandError || !brandDoc) {
+    console.error(`Brand with ID "${id}" does not exist.`);
+    return;
+  }
+
+  const oldName = brandDoc.name;
+  const oldCategory = brandDoc.category;
+
+  // Update brand
+  const { error: updateBrandErr } = await supabase
+    .from('BrandDisplay')
+    .update({ name, category, status })
+    .eq('id', id);
+
+  if (updateBrandErr) throw updateBrandErr;
+  console.log("hi")
+  // Update related documents in ItemManagementDis
+  const { data: items, error: itemError } = await supabase
+    .from('ItemManagementDis')
+    .select('id')
+    .eq('brand', oldName)
+    .eq('category', oldCategory);
+
+  if (itemError) throw itemError;
+
+  for (const item of items) {
+    await supabase
+      .from('ItemManagementDis')
+      .update({ brand: name, category: category })
+      .eq('id', item.id);
+  }
+
+  // Update related documents in Stock
+  const { data: stocks, error: stockError } = await supabase
+    .from('Stock')
+    .select('id')
+    .eq('brand', oldName)
+    .eq('category', oldCategory);
+
+  if (stockError) throw stockError;
+
+  for (const stock of stocks) {
+    await supabase
+      .from('Stock')
+      .update({ brand: name, category: category })
+      .eq('id', stock.id);
   }
 };
 
-export const updateBrand1 = async (id: string, name: string, category: string, status: boolean) => {
-  const brandRef = doc(firestore, 'BrandDisplay', id);
-  await updateDoc(brandRef, { name, category, status });
-};
-export const updateBrand = async (id: string, name: string, category: string, status: boolean) => {
-	const brandRef = doc(firestore, 'BrandDisplay', id);
-	const brandDoc: any = await getDoc(brandRef);
-
-	await updateDoc(brandRef, { category, name, status });
-	if (!brandDoc.exists()) {
-		console.error(`Category with ID "${id}" does not exist.`);
-		// return;
-	}
-	const oldName = brandDoc.data().name; // Get the old category name
-	const oldcategory = brandDoc.data().category;
-	console.log(`Old category name: "${oldName}"`);
-
-	const itemManagementRef = collection(firestore, 'ItemManagementDis');
-	const itemQuery = query(
-		itemManagementRef,
-		where('brand', '==', oldName),
-		where('category', '==', oldcategory),
-	);
-	const querySnapshot = await getDocs(itemQuery);
-
-	if (querySnapshot.empty) {
-		console.log(`No documents found in ItemManagementAcce with category name "${oldName}".`);
-	}
-
-	// Update the category name in the matching ItemManagementAcce documents
-	const batchUpdates = querySnapshot.docs.map((docSnapshot) => {
-		const itemDocRef = doc(firestore, 'ItemManagementDis', docSnapshot.id);
-		return updateDoc(itemDocRef, { brand: name, category: category });
-	});
-
-	// Wait for all updates to complete
-	await Promise.all(batchUpdates);
-
-	const stockManagementRef = collection(firestore, 'Stock');
-	const stockQuery = query(
-		stockManagementRef,
-		where('brand', '==', oldName),
-		where('category', '==', oldcategory),
-	);
-	const querySnapshot1 = await getDocs(stockQuery);
-
-	if (querySnapshot1.empty) {
-		console.log(`No documents found in ItemManagementAcce with category name "${oldName}".`);
-	}
-
-	// Update the category name in the matching ItemManagementAcce documents
-	const batchUpdates1 = querySnapshot1.docs.map((docSnapshot) => {
-		const stockDocRef = doc(firestore, 'Stock', docSnapshot.id);
-		return updateDoc(stockDocRef, { brand: name, category: category });
-	});
-
-	// Wait for all updates to complete
-	await Promise.all(batchUpdates1);
-};
+// Delete brand
 export const deleteBrand = async (id: string) => {
-  const brandRef = doc(firestore, 'BrandDisplay', id);
-  await deleteDoc(brandRef);
+  const { error } = await supabase
+    .from('BrandDisplay')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 };

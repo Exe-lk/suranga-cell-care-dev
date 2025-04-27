@@ -19,9 +19,10 @@ import CategoryAddModal from '../../../components/custom/CategoryAddModal';
 import CategoryDeleteModal from '../../../components/custom/CategoryDeleteModal';
 import CategoryEditModal from '../../../components/custom/CategoryEditModal';
 import Swal from 'sweetalert2';
-
-import { useSelector } from "react-redux";
-import { RootState } from "../../../redux/store";
+import {
+	useGetCategoriesQuery,
+	useUpdateCategoryMutation,
+} from '../../../redux/slices/categoryApiSlice';
 import { toPng, toSvg } from 'html-to-image';
 import { DropdownItem }from '../../../components/bootstrap/Dropdown';
 import jsPDF from 'jspdf'; 
@@ -32,7 +33,6 @@ import PaginationButtons, {
 	PER_COUNT,
 } from '../../../components/PaginationButtons';
 import { useGetBrandsQuery } from '../../../redux/slices/brandApiSlice';
-import { updateCategory1 } from '../../../service/categoryService';
 
 interface Category {
 	cid: string;
@@ -48,12 +48,11 @@ const Index: NextPage = () => {
 	const [category, setcategory] = useState<Category[]>([]); 
 	const [id, setId] = useState<string>(''); 
 	const [status, setStatus] = useState(true); 
-	// const { data: categories, error, isLoading, refetch } = useGetCategoriesQuery(undefined);
-	const categories = useSelector((state: RootState) => state.categories.categories);
-	// const { data: brands } = useGetBrandsQuery(undefined);
+	const { data: categories, error, isLoading, refetch } = useGetCategoriesQuery(undefined);
+	const { data: brands } = useGetBrandsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
-	// const [updateCategory] = useUpdateCategoryMutation();
+	const [updateCategory] = useUpdateCategoryMutation();
 	const inputRef = useRef<HTMLInputElement>(null);
 	
 	useEffect(() => {
@@ -64,13 +63,13 @@ const Index: NextPage = () => {
 	}, [ categories]);
 
 	const handleClickDelete = async (category: any) => {
-		// const isCategoryLinked = brands.some((brand:any) => brand.category === category.name);
+		const isCategoryLinked = brands.some((brand:any) => brand.category === category.name);
 
-		// if (isCategoryLinked) {
+		if (isCategoryLinked) {
 			
-		// 	Swal.fire('Error', 'Failed to delete category. please delete the brands related to this.', 'error');
-		// 	return; 
-		// }
+			Swal.fire('Error', 'Failed to delete category. please delete the brands related to this.', 'error');
+			return; 
+		}
 		try {
 			const result = await Swal.fire({
 				title: 'Are you sure?',
@@ -83,14 +82,13 @@ const Index: NextPage = () => {
 			});
 			if (result.isConfirmed) {
 				try {
-					console.log(category.id);
-					await updateCategory1(
-						category.id,
-						category.name,
-						false
-					);
+					await updateCategory({
+						id: category.id,
+						name: category.name,
+						status: false,
+					});
 					Swal.fire('Deleted!', 'Category has been deleted.', 'success');
-					// refetch(); 
+					refetch(); 
 				} catch (error) {
 					console.error('Error during handleDelete: ', error);
 					Swal.fire(
@@ -398,7 +396,7 @@ try {
 										</tr>
 									</thead>
 									<tbody>
-										{/* {isLoading && (
+										{isLoading && (
 											<tr>
 												<td>Loading...</td>
 											</tr>
@@ -407,7 +405,7 @@ try {
 											<tr>
 												<td>Error fetching brands.</td>
 											</tr>
-										)} */}
+										)}
 										{categories &&
 											dataPagination(categories, currentPage, perPage)
 												.filter((category: any) => category.status === true) 
@@ -465,7 +463,7 @@ try {
 									icon='Delete'
 									className='mb-5'
 									onClick={() => {
-										// refetch();
+										refetch();
 										setDeleteModalStatus(true);
 									}}>
 									Recycle Bin
@@ -488,7 +486,7 @@ try {
 				setIsOpen={setDeleteModalStatus}
 				isOpen={deleteModalStatus}
 				id=''
-				refetchMainPage={() => {}}
+				refetchMainPage={refetch}
 			/>
 			<CategoryEditModal
 				setIsOpen={setEditModalStatus}

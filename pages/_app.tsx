@@ -18,8 +18,7 @@ import App from '../layout/App/App';
 import AsideRoutes from '../layout/Aside/AsideRoutes';
 import { ToastCloseButton } from '../components/bootstrap/Toasts';
 import { Provider } from 'react-redux';
-import { store, persistor } from '../redux/store';
-import { PersistGate } from "redux-persist/integration/react";
+import store from '../redux/store';
 import { PrimeReactProvider, PrimeReactContext } from 'primereact/api';
 
 import "primereact/resources/themes/lara-dark-blue/theme.css";
@@ -45,7 +44,6 @@ const MyApp = ({ Component, pageProps }: AppProps) => {
 	return (
 		<PrimeReactProvider>
 		<Provider store={store}>
-			<PersistGate loading={null} persistor={persistor}>
 		<AuthContextProvider>
 			<ThemeContextProvider>
 				<ThemeProvider theme={theme}>
@@ -72,7 +70,6 @@ const MyApp = ({ Component, pageProps }: AppProps) => {
 				</ThemeProvider>
 			</ThemeContextProvider>
 		</AuthContextProvider>
-		</PersistGate>
 		</Provider>
 		</PrimeReactProvider>
 	);

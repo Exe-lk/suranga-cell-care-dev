@@ -27,7 +27,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DropdownItem } from '../../../components/bootstrap/Dropdown';
 import { toPng, toSvg } from 'html-to-image';
-import { useGetItemDiss1Query, useUpdateItemDisMutation } from '../../../redux/slices/itemManagementDisApiSlice';
+import {
+	useGetItemDiss1Query,
+	useUpdateItemDisMutation,
+} from '../../../redux/slices/itemManagementDisApiSlice';
 import { useGetItemDissQuery } from '../../../redux/slices/itemManagementDisApiSlice';
 import PaginationButtons, {
 	dataPagination,
@@ -37,7 +40,6 @@ import bill from '../../../assets/img/bill/WhatsApp_Image_2024-09-12_at_12.26.10
 import { ref } from 'firebase/storage';
 import {
 	useGetStockInOutByIdQuery,
-	
 	useGetStockInOutsQuery,
 } from '../../../redux/slices/stockInOutDissApiSlice';
 import { tr } from 'date-fns/locale';
@@ -45,7 +47,6 @@ import { tr } from 'date-fns/locale';
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
-	// const [s, setId] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [returnModalStatus, setReturnModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
@@ -56,20 +57,18 @@ const Index: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['100']);
 	const [lastDoc, setLastDoc] = useState(null);
-	
-	// const { data: itemDiss,} = useGetItemDissQuery(undefined);
 	const {
-			data: itemDiss,
-			error,
-			isLoading,
-			refetch,
-		} =  useGetItemDiss1Query({ page: currentPage, perPage, lastDoc,searchtearm:searchTerm });
+		data: itemDiss,
+		error,
+		isLoading,
+		refetch,
+	} = useGetItemDiss1Query({ page: currentPage, perPage, lastDoc, searchtearm: searchTerm });
+console.log(itemDiss)
 	const {
 		data: StockInOuts,
 		error: stockInOutError,
 		isLoading: stockInOutLoading,
 	} = useGetStockInOutByIdQuery(id);
-	
 	const [updateItemDis] = useUpdateItemDisMutation();
 	const [quantity, setQuantity] = useState<any>();
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -83,13 +82,12 @@ const Index: NextPage = () => {
 			inputRef.current.focus();
 		}
 	}, [itemDiss]);
-useEffect(() => {
+	useEffect(() => {
 		if (itemDiss?.lastDoc) {
 			setLastDoc(itemDiss.lastDoc);
 		}
 	}, []);
 	const handleClickDelete = async (itemDis: any) => {
-		console.log(itemDis);
 		if (itemDis.quantity > 0) {
 			Swal.fire('Error', 'Failed to delete stock item. stock quantity must be zero', 'error');
 
@@ -366,7 +364,7 @@ useEffect(() => {
 			if (table) restoreLastCells(table);
 		}
 	};
-	console.log(StockInOuts);
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -473,8 +471,8 @@ useEffect(() => {
 												</tr>
 											)}
 											{itemDiss &&
-												dataPagination(itemDiss.data, currentPage, perPage)
-													.filter((brand: any) => {
+												dataPagination(itemDiss, currentPage, perPage)
+													?.filter((brand: any) => {
 														const search = searchTerm.toLowerCase();
 														return (
 															brand.code
@@ -520,33 +518,46 @@ useEffect(() => {
 														<React.Fragment key={index}>
 															<tr key={index}>
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}
-																	
-																		
-
-																	}>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.code}
 																</td>
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}}
-																	>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.model}
 																</td>
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}}>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.brand}
 																</td>
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}}>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.category}
 																</td>
 																{/* <td>{itemDiss.reorderLevel}</td> */}
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}}>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.quantity}
 																</td>
 																<td
-																	onClick={() =>{setId(itemDiss.code),toggleRow(index)}}>
+																	onClick={() => {
+																		setId(itemDiss.code),
+																			toggleRow(index);
+																	}}>
 																	{itemDiss.boxNumber}
 																</td>
 

@@ -1,55 +1,53 @@
-// redux/slices/usersSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-export interface User {
-  id: string;
-  name: string;
-  gender: string;
-  address: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  status: boolean;
-  timestamp: any;
-}
 
 export const categoryApiSlice = createApi({
   reducerPath: 'categoryApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/category' }),
+  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000/api/'  }),
   tagTypes: ['Category'],
   endpoints: (builder) => ({
-    getCategories: builder.query<Category[], void>({
-      query: () => '/route',
+    getCategories: builder.query({
+      query: () => 'category/route',
       providesTags: ['Category'],
     }),
-    getDeleteCategories: builder.query<Category[], void>({
-      query: () => '/bin',
+    getCategoryById: builder.query({
+      query: (id) => `category/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Category', id }],
+    }),
+    getDeleteCategories: builder.query({
+      query: () => 'category/bin',
       providesTags: ['Category'],
     }),
-    updateCategory: builder.mutation<Category, { id: string; name: string; status: boolean }>({
-      query: ({ id, ...patch }) => ({
-        url: `/${id}`,
-        method: 'PUT',
-        body: patch,
+    addCategory: builder.mutation({
+      query: (newCategory) => ({
+        url: 'category/route',
+        method: 'POST',
+        body: newCategory,
       }),
       invalidatesTags: ['Category'],
     }),
-    deleteCategory: builder.mutation<void, string>({
+    updateCategory: builder.mutation({
+      query: ({ id, ...updatedCategory }) => ({
+        url: `category/${id}`,
+        method: 'PUT',
+        body: updatedCategory,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Category', id }],
+    }),
+    deleteCategory: builder.mutation({
       query: (id) => ({
-        url: `/${id}`,
+        url: `category/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Category'],
+      invalidatesTags: (result, error, id) => [{ type: 'Category', id }],
     }),
   }),
 });
 
 export const {
   useGetCategoriesQuery,
+  useGetCategoryByIdQuery,
   useGetDeleteCategoriesQuery,
+  useAddCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
 } = categoryApiSlice;

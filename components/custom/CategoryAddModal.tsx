@@ -6,7 +6,8 @@ import FormGroup from '../bootstrap/forms/FormGroup';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
 import Swal from 'sweetalert2';
-import { createCategory } from '../../service/categoryService';
+import { useAddCategoryMutation } from '../../redux/slices/categoryApiSlice';
+import { useGetCategoriesQuery } from '../../redux/slices/categoryApiSlice';
 
 interface CategoryEditModalProps {
 	id: string;
@@ -15,7 +16,9 @@ interface CategoryEditModalProps {
 }
 
 const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }) => {
-
+	const [addCategory, { isLoading }] = useAddCategoryMutation();
+	const { refetch } = useGetCategoriesQuery(undefined);
+	const { data: categoryData } = useGetCategoriesQuery(undefined);
 
 	const formik = useFormik({
 		initialValues: {
@@ -35,6 +38,21 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 		},
 		onSubmit: async (values) => {
 			try {
+				await refetch();
+	
+				const trimmedName = values.name.trim();
+				const existingCategory = categoryData?.find(
+					(category: { name: string }) => category.name.toLowerCase() === trimmedName.toLowerCase()
+				);
+	
+				if (existingCategory) {
+					await Swal.fire({
+						icon: 'error',
+						title: 'Duplicate Category',
+						text: 'A category with this name already exists.',
+					});
+					return;
+				}
 				const process = Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
@@ -43,8 +61,8 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 					showConfirmButton: false,
 				});
 				try {
-					const response: any = await createCategory(values.name);
-					
+					const response: any = await addCategory(values).unwrap();
+					refetch();
 					await Swal.fire({
 						icon: 'success',
 						title: 'Category Created Successfully',

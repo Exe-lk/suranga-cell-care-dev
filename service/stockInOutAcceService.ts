@@ -1,58 +1,146 @@
-import { firestore } from '../firebaseConfig';
-import { addDoc, collection, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, Timestamp ,serverTimestamp} from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 
+// Create Stock In Entry
 export const createstockIn = async (values: any) => {
-  values.status = true;
-  values.timestamp = Timestamp.now();
-  const docRef = await addDoc(collection(firestore, 'StockAcce'), values);
-  return docRef.id;
-};
+  const status = true;
+  const timestamp = new Date(); // Supabase uses JS Date for timestamps
 
-export const getstockIns = async () => {
-  const q = query(collection(firestore, 'StockAcce'), where('status', '==', true));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-};
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .insert([{ ...values, status, timestamp }])
+    .select('id') // to return the inserted id
 
-
-export const getstockInById = async (id: string) => {
-  const stockInRef = doc(firestore, 'StockAcce', id);
-  const stockInSnap = await getDoc(stockInRef);
-  if (stockInSnap.exists()) {
-    return { id: stockInSnap.id, ...stockInSnap.data() };
-  } else {
+  if (error) {
+    console.error('Error creating stock in:', error);
     return null;
   }
+
+  return data?.[0]?.id;
 };
+
+// Get All Active Stock In Entries
+export const getstockIns = async () => {
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .select('*')
+    .eq('status', true);
+
+  if (error) {
+    console.error('Error fetching stock ins:', error);
+    return [];
+  }
+
+  return data;
+};
+
+// Get Stock In Entry by ID
+export const getstockInById = async (id: string) => {
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching stock in by ID:', error);
+    return null;
+  }
+
+  return data;
+};
+
+// Update Quantity in ItemManagementAcce Table
 export const updatestockIn = async (id: string, quantity: string) => {
-  console.log(id)
-  console.log(quantity)
-  const stockInRef = doc(firestore, 'ItemManagementAcce', id);
-  await updateDoc(stockInRef, { quantity });
+  const { error } = await supabase
+    .from('ItemManagementAcce')
+    .update({ quantity })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating quantity:', error);
+  }
 };
 
-export const createstockOut = async (model: string, brand: string, category: string, quantity: string, date: string, customerName: string, mobile: string, nic: string, email: string, barcode: string, cost: string, sellingPrice: string, stock: string,description:string) => {
+// Create Stock Out Entry (still inserted into StockAcce)
+export const createstockOut = async (
+  model: string,
+  brand: string,
+  category: string,
+  quantity: string,
+  date: string,
+  customerName: string,
+  mobile: string,
+  nic: string,
+  email: string,
+  barcode: string,
+  cost: string,
+  sellingPrice: string,
+  stock: string,
+  description: string
+) => {
   const status = true;
-  const timestamp = Timestamp.now();
-  const docRef = await addDoc(collection(firestore, 'StockAcce'), { model, brand, category, quantity, date, customerName, mobile, nic, email, barcode, cost, sellingPrice, stock, status,description, timestamp: timestamp});
-  console.log(docRef.id);
-  return docRef.id;
+  const timestamp = new Date();
+
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .insert([{
+      model,
+      brand,
+      category,
+      quantity,
+      date,
+      customerName,
+      mobile,
+      nic,
+      email,
+      barcode,
+      cost,
+      sellingPrice,
+      stock,
+      description,
+      status,
+      timestamp
+    }])
+    .select('id');
+
+  if (error) {
+    console.error('Error creating stock out:', error);
+    return null;
+  }
+
+  return data?.[0]?.id;
 };
 
+// Mark Stock as Deleted (status = false)
 export const createstockDelete = async (values: any) => {
-  values.status = false;
-  values.timestamp = Timestamp.now();
-  const docRef = await addDoc(collection(firestore, 'StockAcce'), values);
-  return docRef.id;
+  const status = false;
+  const timestamp = new Date();
+
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .insert([{ ...values, status, timestamp }])
+    .select('id');
+
+  if (error) {
+    console.error('Error creating stock delete:', error);
+    return null;
+  }
+
+  return data?.[0]?.id;
 };
 
+// Get Stock In Entries by Date
 export const getstockInByDate = async (date: string) => {
-  const q = query(
-    collection(firestore, 'StockAcce'),
-    where('status', '==', true),
-    where('date', '==', date)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const { data, error } = await supabase
+    .from('StockAcce')
+    .select('*')
+    .eq('status', true)
+    .eq('date', date);
+
+  if (error) {
+    console.error('Error fetching stock by date:', error);
+    return [];
+  }
+
+  return data;
 };

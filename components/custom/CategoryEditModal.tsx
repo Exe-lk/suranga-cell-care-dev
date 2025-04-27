@@ -10,7 +10,10 @@ import Button from '../bootstrap/Button';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { firestore, storage } from '../../firebaseConfig';
 import Swal from 'sweetalert2';
-import { updateCategory,getCategoryById } from '../../service/categoryService';
+import {
+	useGetCategoriesQuery,
+	useUpdateCategoryMutation,
+} from '../../redux/slices/categoryApiSlice';
 import {getBrand, updateBrand} from '../../service/brandService'
 import {getModel, updateModel} from '../../service/modelService'
 
@@ -22,7 +25,7 @@ interface CategoryEditModalProps {
 }
 
 const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }) => {
-
+	const { data: categoryData, refetch } = useGetCategoriesQuery(undefined);
 	const [brandData, setBrandData] = useState<any[]>([]);
 	const [modelData, setModelData] = useState<any[]>([]);
 
@@ -42,14 +45,14 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }
 		fetchModelData();
 	}, []);
 
-
-
+	const [updateCategory, { isLoading }] = useUpdateCategoryMutation();
+	const categoryToEdit = categoryData?.find((category: any) => category.id === id);
 	
 
 	const formik = useFormik({
 		initialValues: {
 			id: '',
-			name:  '',
+			name: categoryToEdit?.name || '',
 		},
 		enableReinitialize: true,
 		validate: (values) => {
@@ -67,8 +70,22 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }
 		},
 		onSubmit: async (values) => {
 			try {
-				
+				await refetch();
 	
+				const trimmedName = values.name.trim();
+				const existingCategory = categoryData?.find(
+					(category: { name: string }) => category.name.toLowerCase() === trimmedName.toLowerCase()
+				);
+	
+				if (existingCategory) {
+					await Swal.fire({
+						icon: 'error',
+						title: 'Duplicate Category',
+						text: 'A category with this name already exists.',
+					});
+					return;
+				}
+
 				const process = Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
@@ -82,9 +99,9 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }
 						status: true,
 						id: id,
 					};
-					await updateCategory(id,values.name.trim(),true);
+					await updateCategory(data).unwrap();
 
-					const categoryToEdit:any = getCategoryById(id)
+					
 					// Update related brands
 					const brandsToUpdate = brandData?.filter(
 						(brand: any) => brand.category === categoryToEdit?.name
@@ -112,7 +129,7 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }
 					}
 
 
-				
+					refetch();
 					await Swal.fire({
 						icon: 'success',
 						title: 'Category Updated Successfully',
