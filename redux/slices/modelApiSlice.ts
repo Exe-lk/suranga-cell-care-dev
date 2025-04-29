@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const modelApiSlice = createApi({
   reducerPath: 'modelApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000/api/'  }),
+  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'  }),
   tagTypes: ['Model'],
   endpoints: (builder) => ({
     getModels: builder.query({
