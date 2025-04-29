@@ -19,7 +19,7 @@ import SubHeader, {
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Swal from 'sweetalert2';
-
+import { supabase } from '../../../lib/supabase';
 interface User {
 	cid: string;
 	image: string;
@@ -47,43 +47,49 @@ const Index: React.FC = () => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
 	useEffect(() => {
-		const fetchData = async () => {
+		const fetchOrders = async () => {
 			try {
-				const dataCollection = collection(firestore, 'returnDisplay');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as any;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setOrders(firebaseData);
+				const { data, error } = await supabase
+					.from('returnDisplay')
+					.select('*');
+	
+				if (error) throw error;
+	
+				const mappedData = data.map((item) => ({
+					...item,
+					cid: item.id, // Supabase includes `id` automatically if you select '*'
+				}));
+	
+				setOrders(mappedData);
 			} catch (error) {
-				console.error('Error fetching data: ', error);
+				console.error('Error fetching orders: ', error);
 			}
 		};
-		fetchData();
+	
+		fetchOrders();
 	}, []);
-
+	
 	useEffect(() => {
-		const fetchData = async () => {
+		const fetchUsers = async () => {
 			try {
-				const dataCollection = collection(firestore, 'user');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as User;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setUser(firebaseData);
+				const { data, error } = await supabase
+					.from('UserManagement')
+					.select('*');
+	
+				if (error) throw error;
+	
+				const mappedData = data.map((item) => ({
+					...item,
+					cid: item.id,
+				}));
+	
+				setUser(mappedData);
 			} catch (error) {
-				console.error('Error fetching data: ', error);
+				console.error('Error fetching users: ', error);
 			}
 		};
-		fetchData();
+	
+		fetchUsers();
 	}, []);
 
 	useEffect(() => {

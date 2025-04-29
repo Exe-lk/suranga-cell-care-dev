@@ -49,14 +49,15 @@ export const createTechnician = async (
   type: string,
   mobileNumber: string
 ) => {
+  console.log(name)
   const { data, error } = await supabase
     .from('technicians') // Replace 'technicians' with your actual table name
     .insert([
       {
-        technician_num: technicianNum,
+        technicianNum,
         name,
         type,
-        mobile_number: mobileNumber,
+        mobileNumber,
         status: true,
       },
     ]);
@@ -111,10 +112,10 @@ export const updateTechnician = async (
   const { data, error } = await supabase
     .from('technicians') // Replace 'technicians' with your actual table name
     .update({
-      technician_num: technicianNum,
+      technicianNum,
       name,
       type,
-      mobile_number: mobileNumber,
+      mobileNumber,
       status,
     })
     .eq('id', id);
@@ -125,9 +126,10 @@ export const updateTechnician = async (
 
 // Delete Technician (Soft Delete: Change status to false)
 export const deleteTechnician = async (id: string) => {
+  console.log(id)
   const { data, error } = await supabase
     .from('technicians') // Replace 'technicians' with your actual table name
-    .update({ status: false })
+    .delete()
     .eq('id', id);
 
   if (error) throw error;
