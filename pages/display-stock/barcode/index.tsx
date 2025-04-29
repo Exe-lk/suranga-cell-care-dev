@@ -21,6 +21,8 @@ import makeAnimated from 'react-select/animated';
 import { MultiSelect } from 'primereact/multiselect';
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { firestore } from '../../../firebaseConfig';
+
+import { supabase } from '../../../lib/supabase'; // adjust path if needed
 const Index: NextPage = () => {
 	// const { data: StockInOuts, error, isLoading, refetch } = useGetStockInOutsQuery(undefined);
 	const [updateSubStockInOut] = useUpdateSubStockInOutMutation();
@@ -37,48 +39,67 @@ const Index: NextPage = () => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [selectedBarcodes, setSelectedBarcodes] = useState<{ [key: string]: any[] }>({});
 
+	// const selectitem = async (id: any, index: any) => {
+	// 	// await setSelectedBarcodes({})
+	// 	const subStockCollectionRef = collection(firestore, 'Stock', id, 'subStock');
+	// 	const subStockSnapshot = await getDocs(subStockCollectionRef);
+
+	// 	const subStock = subStockSnapshot.docs.map((subDoc) => ({
+	// 		id: subDoc.id,
+	// 		...subDoc.data(),
+	// 	}));
+
+	// 	await setStockInOuts((prevStockInOuts) => {
+	// 		return prevStockInOuts.map((item: any) =>
+	// 			item.barcode === index ? { ...item, subStock } : item,
+	// 		);
+	// 	});
+	// 	console.log(selectedBarcodes);
+	// 	// console.log(subStock);
+	// 	// console.log(index);
+	// 	// console.log(StockInOuts);
+	// };
 	const selectitem = async (id: any, index: any) => {
-		// await setSelectedBarcodes({})
-		const subStockCollectionRef = collection(firestore, 'Stock', id, 'subStock');
-		const subStockSnapshot = await getDocs(subStockCollectionRef);
-
-		const subStock = subStockSnapshot.docs.map((subDoc) => ({
-			id: subDoc.id,
-			...subDoc.data(),
-		}));
-
-		await setStockInOuts((prevStockInOuts) => {
-			return prevStockInOuts.map((item: any) =>
-				item.barcode === index ? { ...item, subStock } : item,
-			);
-		});
-		console.log(selectedBarcodes);
-		// console.log(subStock);
-		// console.log(index);
-		// console.log(StockInOuts);
+		try {
+			// Fetch substocks where stock_id = id
+			const { data: subStock, error } = await supabase
+				.from('subStock')
+				.select('*')
+				.eq('stock_id', id);
+	
+			if (error) throw error;
+	
+			await setStockInOuts((prevStockInOuts) => {
+				return prevStockInOuts.map((item: any) =>
+					item.barcode === index ? { ...item, subStock: subStock || [] } : item,
+				);
+			});
+	
+			console.log(selectedBarcodes);
+		} catch (error) {
+			console.error('Error fetching substock: ', error);
+		}
 	};
+	
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const q = query(
-					collection(firestore, 'Stock'),
-					where('status', '==', true),
-					where('stock', '==', 'stockIn'),
-				);
-
-				const querySnapshot = await getDocs(q);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as any;
-					return {
-						...data,
-						id: doc.id,
-						subStock: [{}],
-					};
-				});
-				console.log(firebaseData);
-				setStockInOuts(firebaseData);
+				const { data: stocks, error } = await supabase
+					.from('Stock')
+					.select('id, barcode, barcodePrefix, boxNumber, brand, category, code, cost, date, description, itemId, model, printlable, quantity, sellingPrice, status, stock, suppName, billNumber, branchNum, dateIn, sellectedItem, sellerName, sellingPrice, technicianNum')
+					.eq('status', true)
+					.eq('stock', 'stockIn');
+	
+				if (error) throw error;
+	
+				const mappedStocks:any = stocks.map((stock) => ({
+					...stock,
+					subStock: [{}], // initially empty
+				}));
+	
+				setStockInOuts(mappedStocks);
 			} catch (error) {
-				console.error('Error fetching data: ', error);
+				console.error('Error fetching stocks: ', error);
 			}
 		};
 		fetchData();
@@ -411,7 +432,7 @@ const Index: NextPage = () => {
 														<td
 															onClick={() => {
 																selectitem(
-																	brand.barcode,
+																	brand.id,
 																	brand.barcode,
 																);
 															}}>

@@ -104,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			case 'PUT': {
 				const { id, subid, values } = req.body;
 				// console.log(req.body)
-				await updateSubStock(id, subid, values);
+				await updateSubStock(subid, values);
 				res.status(200).json({ message: 'stock In updated' });
 				break;
 			}

@@ -25,7 +25,7 @@ import { default as BootstrapSelect } from '../bootstrap/forms/Select';
 import Option, { Options } from '../bootstrap/Option';
 import { arrayUnion, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { firestore } from '../../firebaseConfig';
-
+import { supabase } from '../../lib/supabase';
 interface StockAddModalProps {
 	id: string;
 	isOpen: boolean;
@@ -107,39 +107,76 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const animatedComponents = makeAnimated();
 	const [StockInOuts, setStockInOuts] = useState<string[]>([]);
 
+	// const getsubstock = async () => {
+	// 	const q = query(
+	// 		collection(firestore, 'Stock'),
+	// 		where('status', '==', true),
+	// 		where('stock', '==', 'stockIn'),
+	// 		where('barcodePrefix', '==', stockOutData?.code),
+	// 	);
+
+	// 	const querySnapshot = await getDocs(q);
+	// 	const firebaseData = await querySnapshot.docs.map((doc) => {
+	// 		const data = doc.data() as any;
+	// 		return {
+	// 			...data,
+	// 			id: doc.id,
+	// 			subStock: [{}],
+	// 		};
+	// 	});
+
+	// 	let allSubStockData: any[] = [];
+	// 	for (const stockDoc of firebaseData) {
+	// 		const stockDocId = stockDoc.id;
+	// 		const subStockCollectionRef = collection(firestore, 'Stock', stockDocId, 'subStock');
+	// 		const subStockSnapshot = await getDocs(subStockCollectionRef);
+	// 		const subStockData = subStockSnapshot.docs.map((subDoc) => ({
+	// 			id: subDoc.id,
+	// 			parentStockId: stockDocId,
+	// 			...subDoc.data(),
+	// 		}));
+	// 		allSubStockData = allSubStockData.concat(subStockData);
+	// 	}
+	// 	setSubstockInData(allSubStockData);
+	// };
+ // adjust path if needed
+
 	const getsubstock = async () => {
-		const q = query(
-			collection(firestore, 'Stock'),
-			where('status', '==', true),
-			where('stock', '==', 'stockIn'),
-			where('barcodePrefix', '==', stockOutData?.code),
-		);
+		try {
+			// Step 1: Fetch matching stocks
+			const { data: stocks, error: stockError } = await supabase
+				.from('Stock')
+				.select('id') // we only need id
+				.eq('stock', 'stockIn')
+				.eq('barcodePrefix', stockOutData?.code);
+	
+			if (stockError) {
+				throw stockError;
+			}
+	
+			if (!stocks || stocks.length === 0) {
+				setSubstockInData([]);
+				return;
+			}
+	console.log(stocks)
+			// Step 2: Fetch substock for all matched stocks
+			const stockIds = stocks.map((stock) => stock.id);
+	
+			const { data: subStocks, error: subStockError } = await supabase
+				.from('subStock')
+				.select('*')
+				.in('stock_id', stockIds);
+	
+			if (subStockError) {
+				throw subStockError;
+			}
 
-		const querySnapshot = await getDocs(q);
-		const firebaseData = await querySnapshot.docs.map((doc) => {
-			const data = doc.data() as any;
-			return {
-				...data,
-				id: doc.id,
-				subStock: [{}],
-			};
-		});
-
-		let allSubStockData: any[] = [];
-		for (const stockDoc of firebaseData) {
-			const stockDocId = stockDoc.id;
-			const subStockCollectionRef = collection(firestore, 'Stock', stockDocId, 'subStock');
-			const subStockSnapshot = await getDocs(subStockCollectionRef);
-			const subStockData = subStockSnapshot.docs.map((subDoc) => ({
-				id: subDoc.id,
-				parentStockId: stockDocId,
-				...subDoc.data(),
-			}));
-			allSubStockData = allSubStockData.concat(subStockData);
+			setSubstockInData(subStocks || []);
+		} catch (error) {
+			console.error('Error fetching substock data:', error);
 		}
-		setSubstockInData(allSubStockData);
 	};
-
+	
 	const stockInQuantity = quantity;
 	const closeModal = () => {
 		setIsOpen(false);
@@ -160,7 +197,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			technicianNum: '',
 			dateIn: '',
 			cost: '',
-			sellingPrice: '',
+			// sellingPrice: '',
 			branchNum: '',
 			sellerName: '',
 			stock: 'stockOut',
@@ -231,6 +268,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				}
 
 				await addstockOut(values).unwrap();
+				
 				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
 				selecteditems.map(async (val: any) => {
 					const id = val.value.split('-')[0];
