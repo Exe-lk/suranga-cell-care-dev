@@ -14,7 +14,7 @@
 //   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 // };
 import { supabase } from '../lib/supabase';
-export const createBill = async (values: any) => {
+export const  Creatbill = async (values: any) => {
   values.status = true;
   values.timestamp = new Date(); // Supabase accepts JS Date objects
   const { data, error } = await supabase
@@ -28,7 +28,7 @@ export const createBill = async (values: any) => {
 
   return data;
 };
-export const getBills = async () => {
+export const Getbills = async () => {
   const { data, error } = await supabase
     .from('displaybill')
     .select('*');
