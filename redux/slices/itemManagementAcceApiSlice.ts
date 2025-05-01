@@ -11,7 +11,8 @@ export const ItemAcceApiSlice = createApi({
     }),
     getItemAcces1: builder.query({
       query: ({ page, perPage, lastDoc,searchtearm }) => ({
-        url: `itemManagementAcce/route1?page=${page}&perPage=${perPage}&lastDoc=${lastDoc || ''}&searchTerm=${searchtearm||''}`,
+        // url: `itemManagementAcce/route1?page=${page}&perPage=${perPage}&lastDoc=${lastDoc || ''}&searchTerm=${searchtearm||''}`,
+        url: `itemManagementAcce/route`,
       }),
       providesTags: ['ItemAcce'],
     }),

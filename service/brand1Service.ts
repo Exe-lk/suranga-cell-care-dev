@@ -128,13 +128,15 @@ import { supabase } from '../lib/supabase';
 
 // Create a new brand
 export const createBrand = async (category: string, name: string) => {
+	console.log(category)
 	const { data, error } = await supabase
 		.from('BrandAccessory')
-		.insert([{ category, name, status: true, timestamp: new Date() }])
-		.select('id') // If your table has an `id` column (e.g., serial primary key)
+		.insert([{category, name, status: true }])
+		.select() // If your table has an `id` column (e.g., serial primary key)
 		.single();
 
 	if (error) throw error;
+	
 	return data.id;
 };
 

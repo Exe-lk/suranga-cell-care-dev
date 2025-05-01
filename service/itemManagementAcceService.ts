@@ -53,6 +53,7 @@ export const createItemAcce = async (values: any) => {
   return data?.[0];
 };
 export const getItemAcces = async () => {
+
   const { data, error } = await supabase
     .from('ItemManagementAcce')
     .select('*')

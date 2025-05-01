@@ -81,7 +81,7 @@ export const updateBrand = async (id: string, name: string, category: string, st
     .eq('id', id);
 
   if (updateBrandErr) throw updateBrandErr;
-  console.log("hi")
+
   // Update related documents in ItemManagementDis
   const { data: items, error: itemError } = await supabase
     .from('ItemManagementDis')
