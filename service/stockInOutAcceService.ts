@@ -4,10 +4,10 @@ import { supabase } from '../lib/supabase';
 export const createstockIn = async (values: any) => {
   const status = true;
   const timestamp = new Date(); // Supabase uses JS Date for timestamps
-
+console.log(values)
   const { data, error } = await supabase
     .from('StockAcce')
-    .insert([{ ...values, status, timestamp }])
+    .insert([{ ...values, status,}])
     .select('id') // to return the inserted id
 
   if (error) {

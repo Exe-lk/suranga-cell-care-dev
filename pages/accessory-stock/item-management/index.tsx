@@ -263,8 +263,8 @@ const Index: NextPage = () => {
 											</tr>
 										)}
 										{itemAcces &&
-											dataPagination(itemAcces.data, currentPage, perPage)
-												.filter((itemAcces: any) =>
+											dataPagination(itemAcces, currentPage, perPage)
+												?.filter((itemAcces: any) =>
 													selectedUsers.length > 0
 														? selectedUsers.includes(itemAcces.type)
 														: true,
@@ -375,7 +375,7 @@ const Index: NextPage = () => {
 								</Button>
 							</CardBody>
 							<PaginationButtons
-								data={itemAcces.data}
+								data={itemAcces}
 								label='parts'
 								setCurrentPage={setCurrentPage}
 								currentPage={currentPage}

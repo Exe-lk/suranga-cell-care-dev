@@ -147,7 +147,7 @@ export const createModel = async (
   
 	const { data, error } = await supabase
 	  .from('ModelAccessory')
-	  .insert([{ name, description, brand, category, status, timestamp }]);
+	  .insert([{ name, description, brand, category, status}]);
   
 	if (error) {
 	  console.error('Error creating model:', error);
