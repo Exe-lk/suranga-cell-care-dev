@@ -15,8 +15,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           res.status(400).json({ error: 'Name is required' });
           return;
         }
-        const id = await createBrand(category, name);
-        res.status(201).json({ message: 'Brand created', id });
+        if (!category) {
+          res.status(400).json({ error: 'Category is required' });
+          return;
+        }
+        
+        try {
+          const id = await createBrand(category, name);
+          res.status(201).json({ message: 'Brand created', id });
+        } catch (error) {
+          console.error("Error creating brand:", error);
+          res.status(500).json({ 
+            error: 'Failed to create brand',
+            details: error.message || 'Unknown error' 
+          });
+        }
         break;
       }
       case 'GET': {
@@ -26,10 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       case 'PUT': {
         const { id, status, category, name } = req.body;
-        // if (!id || !name) {
-        //   res.status(400).json({ error: 'Brand ID and name are required' });
-        //   return;
-        // }
+        if (!id || !name || !category) {
+          res.status(400).json({ error: 'Brand ID, name, and category are required' });
+          return;
+        }
         await updateBrand(id, status, category, name);
         res.status(200).json({ message: 'Brand updated' });
         break;
@@ -51,6 +64,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
   } catch (error) {
-    res.status(500).json({ error: 'An error occurred', });
+    console.error("API route error:", error);
+    res.status(500).json({ 
+      error: 'An error occurred', 
+      details: error.message || 'Unknown error'
+    });
   }
 }

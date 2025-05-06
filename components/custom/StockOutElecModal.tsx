@@ -205,6 +205,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			substockInData: '',
 			sellectedItem: '',
 			billNumber: '',
+			code: stockOut.code,
 		},
 		enableReinitialize: true,
 		validate: (values) => {
@@ -248,6 +249,12 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				await refetch();
 				values.quantity = selecteditems.length;
 				values.sellectedItem = selecteditems;
+				
+				// Ensure the code field is set properly from stockOutData
+				if (stockOutData?.code) {
+					values.code = stockOutData.code;
+				}
+				
 				const stockOutQuantity = values.quantity ? parseInt(values.quantity) : 0;
 				if (isNaN(stockInQuantity) || isNaN(stockOutQuantity)) {
 					Swal.fire({

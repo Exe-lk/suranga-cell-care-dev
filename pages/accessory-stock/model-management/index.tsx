@@ -360,7 +360,7 @@ const downloadTableAsSVG = async () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
+						placeholder='Search by model, category or brand...'
 						onChange={(event: any) => {
 							setSearchTerm(event.target.value);
 						}}

@@ -128,14 +128,32 @@ import { supabase } from '../lib/supabase';
 
 // Create a new brand
 export const createBrand = async (category: string, name: string) => {
-	const { data, error } = await supabase
-		.from('BrandAccessory')
-		.insert([{ category, name, status: true, timestamp: new Date() }])
-		.select('id') // If your table has an `id` column (e.g., serial primary key)
-		.single();
-
-	if (error) throw error;
-	return data.id;
+	try {
+		const { data, error } = await supabase
+			.from('BrandAccessory')
+			.insert([{ 
+				category, 
+				name, 
+				status: true,
+				created_at: new Date() // Use created_at instead of timestamp
+			}])
+			.select('id')
+			.single();
+		
+		if (error) {
+			console.error("Supabase error when creating brand:", error);
+			throw error;
+		}
+		
+		if (!data || !data.id) {
+			throw new Error("Failed to create brand: No ID returned");
+		}
+		
+		return data.id;
+	} catch (error) {
+		console.error("Error in createBrand:", error);
+		throw error;
+	}
 };
 
 // Get active brands
@@ -238,6 +256,26 @@ export const updateBrand = async (id: string, category: string, name: string, st
 			.in('id', stockIds);
 
 		if (stockUpdateError) throw stockUpdateError;
+	}
+
+	// 5. Update related models in ModelAccessory table
+	const { data: modelDocs, error: modelFetchError } = await supabase
+		.from('ModelAccessory')
+		.select('id')
+		.eq('brand', oldName)
+		.eq('category', oldCategory);
+
+	if (modelFetchError) throw modelFetchError;
+
+	if (modelDocs.length > 0) {
+		const modelIds = modelDocs.map((doc: any) => doc.id);
+
+		const { error: modelUpdateError } = await supabase
+			.from('ModelAccessory')
+			.update({ brand: name, category })
+			.in('id', modelIds);
+
+		if (modelUpdateError) throw modelUpdateError;
 	}
 };
 

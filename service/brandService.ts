@@ -113,6 +113,22 @@ export const updateBrand = async (id: string, name: string, category: string, st
       .update({ brand: name, category: category })
       .eq('id', stock.id);
   }
+  
+  // Update related models in ModelDisplay table
+  const { data: models, error: modelError } = await supabase
+    .from('ModelDisplay')
+    .select('id')
+    .eq('brand', oldName)
+    .eq('category', oldCategory);
+
+  if (modelError) throw modelError;
+
+  for (const model of models) {
+    await supabase
+      .from('ModelDisplay')
+      .update({ brand: name, category: category })
+      .eq('id', model.id);
+  }
 };
 
 // Delete brand

@@ -24,82 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			}
 			case 'GET': {
 				const { date, searchTerm } = req.query;
-
-				if (!date || typeof date !== 'string') {
-					res.status(400).json({ error: 'Valid date is required' });
-					return;
-				}
-
-				if (searchTerm == '') {
-					const stockData = await getstockInByDate(date, searchTerm);
-					console.log(stockData);
-					res.status(200).json(stockData);
-				} else {
-					console.log(searchTerm);
-					const qCode = query(
-						collection(firestore, 'Stock'),
-						where('code', '==', searchTerm),
-					);
-					const barCode = query(
-						collection(firestore, 'Stock'),
-						where('barcode', '==', searchTerm),
-					);
-					const qCategory = query(
-						collection(firestore, 'Stock'),
-						where('category', '==', searchTerm),
-					);
-					const qBrand = query(
-						collection(firestore, 'Stock'),
-						where('brand', '==', searchTerm),
-					);
-					const qModel = query(
-						collection(firestore, 'Stock'),
-						where('model', '==', searchTerm),
-					);
-
-					Promise.all([
-						getDocs(qCode),
-						getDocs(qCategory),
-						getDocs(qBrand),
-						getDocs(qModel),
-						getDocs(barCode),
-					]).then(
-						([
-							snapshotCode,
-							snapshotCategory,
-							snapshotBrand,
-							snapshotModel,
-							snapshotBarcode,
-						]) => {
-							const results = [
-								...snapshotCode.docs,
-								...snapshotCategory.docs,
-								...snapshotBrand.docs,
-								...snapshotModel.docs,
-								...snapshotBarcode.docs,
-							];
-
-							// Deduplicate documents based on their ID
-							const uniqueResults = Array.from(
-								new Set(results.map((doc) => doc.id)),
-							).map((id) => results.find((doc) => doc.id === id));
-
-							// Convert documents to JSON format
-							const data = uniqueResults.map((doc: any) => ({
-								id: doc.id, // Include document ID
-								...doc.data(), // Spread document fields
-							}));
-							console.log(data);
-							res.status(200).json(data);
-						},
-					);
-				}
-
+				
+				// Use the updated service function that supports search terms
+				const stockData = await getstockInByDate(
+					date as string || '', 
+					searchTerm as string || ''
+				);
+				console.log(stockData);
+				res.status(200).json(stockData);
 				break;
-
-				// const stockIns = await getAllSubStockData();
-				// res.status(200).json(stockIns);
-				// break;
 			}
 			case 'PUT': {
 				const { id, subid, values } = req.body;
