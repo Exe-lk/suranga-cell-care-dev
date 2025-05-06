@@ -38,8 +38,8 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 		},
 		onSubmit: async (values) => {
 			try {
-				await refetch();
-	
+				// await refetch();
+				setIsOpen(false);
 				const trimmedName = values.name.trim();
 				const existingCategory = categoryData?.find(
 					(category: { name: string }) => category.name.toLowerCase() === trimmedName.toLowerCase()

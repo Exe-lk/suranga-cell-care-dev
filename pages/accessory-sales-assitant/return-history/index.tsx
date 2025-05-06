@@ -19,6 +19,7 @@ import SubHeader, {
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Swal from 'sweetalert2';
+import { supabase } from '../../../lib/supabase';
 
 interface User {
 	cid: string;
@@ -47,44 +48,51 @@ const Index: React.FC = () => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
 	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'return');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as any;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setOrders(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
+		const fetchReturnData = async () => {
+		  try {
+			const { data, error } = await supabase
+			  .from('return')
+			  .select('*');
+	  
+			if (error) throw error;
+	  
+			const formattedData = data.map(item => ({
+			  ...item,
+			  cid: item.id, // Mimic Firestore's doc.id
+			}));
+	  
+			setOrders(formattedData);
+		  } catch (error:any) {
+			console.error('Error fetching return data:', error.message);
+		  }
 		};
-		fetchData();
-	}, []);
-
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'user');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as User;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setUser(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
+	  
+		fetchReturnData();
+	  }, []);
+	  
+	  // 2️⃣ Fetch "user" table data
+	  useEffect(() => {
+		const fetchUserData = async () => {
+		  try {
+			const { data, error } = await supabase
+			  .from('user')
+			  .select('*');
+	  
+			if (error) throw error;
+	  
+			const formattedData = data.map(item => ({
+			  ...item,
+			  cid: item.id,
+			}));
+	  
+			setUser(formattedData);
+		  } catch (error:any) {
+			console.error('Error fetching user data:', error.message);
+		  }
 		};
-		fetchData();
-	}, []);
+	  
+		fetchUserData();
+	  }, []);
 
 	useEffect(() => {
 		const filterOrdersByDate = () => {

@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(404).json({ error: 'Brand not found' });
           }
           return res.status(200).json(brand);
-        } catch (error) {
+        } catch (error:any) {
           console.error(`Error fetching brand with ID ${id}:`, error);
           return res.status(500).json({ 
             error: 'Failed to fetch brand', 
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           await updateBrand(id, category, name, status);
           return res.status(200).json({ message: 'Brand updated successfully' });
-        } catch (error) {
+        } catch (error:any) {
           console.error(`Error updating brand with ID ${id}:`, error);
           return res.status(500).json({ 
             error: 'Failed to update brand', 
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           await deleteBrand(id);
           return res.status(200).json({ message: 'Brand deleted successfully' });
-        } catch (error) {
+        } catch (error:any) {
           console.error(`Error deleting brand with ID ${id}:`, error);
           return res.status(500).json({ 
             error: 'Failed to delete brand', 
@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).end(`Method ${req.method} Not Allowed`);
       }
     }
-  } catch (error) {
+  } catch (error:any) {
     console.error(`Unexpected error handling brand ID ${id}:`, error);
     return res.status(500).json({ 
       error: 'An unexpected error occurred', 

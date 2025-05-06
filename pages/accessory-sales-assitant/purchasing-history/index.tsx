@@ -19,6 +19,7 @@ import SubHeader, {
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Swal from 'sweetalert2';
+import { supabase } from '../../../lib/supabase';
 
 interface Orders {
 	id: string;
@@ -58,42 +59,36 @@ const Index: React.FC = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const dataCollection = collection(firestore, 'accessorybill');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as Orders;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setOrders(firebaseData);
+				const { data, error }: any = await supabase.from('accessorybill').select('*');
+
+				if (error) throw error;
+
+				setOrders(data);
+				// console.log(data);
 			} catch (error) {
-				console.error('Error fetching data: ', error);
+				console.error('Error fetching data:', error);
 			}
 		};
+
 		fetchData();
 	}, []);
 
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'user');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as User;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setUser(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
-		};
-		fetchData();
-	}, []);
+		useEffect(() => {
+			const fetchData = async () => {
+				try {
+					const { data, error }: any = await supabase.from('user').select('*');
+	
+					if (error) throw error;
+	
+					setUser(data);
+					// console.log(data);
+				} catch (error) {
+					console.error('Error fetching data:', error);
+				}
+			};
+	
+			fetchData();
+		}, []);
 
 	useEffect(() => {
 		const filterOrdersByDate = () => {

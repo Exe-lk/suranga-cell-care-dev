@@ -104,7 +104,7 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					});
 					formik.resetForm();
 					setIsOpen(false);
-				} catch (error) {
+				} catch (error:any) {
 					await processingSwal;
 					console.error('Error during brand creation: ', error);
 					await Swal.fire({

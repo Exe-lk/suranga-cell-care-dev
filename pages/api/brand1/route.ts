@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           const id = await createBrand(category, name);
           res.status(201).json({ message: 'Brand created', id });
-        } catch (error) {
+        } catch (error:any) {
           console.error("Error creating brand:", error);
           res.status(500).json({ 
             error: 'Failed to create brand',
@@ -63,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
     }
-  } catch (error) {
+  } catch (error:any) {
     console.error("API route error:", error);
     res.status(500).json({ 
       error: 'An error occurred', 

@@ -154,7 +154,7 @@ export const createModel = async (
 	  throw error;
 	}
   
-	return data?.[0]?.id;
+	return data?.[0];
   };
   export const getModel = async () => {
 	const { data, error } = await supabase

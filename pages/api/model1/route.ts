@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           const id = await createModel(name, description, brand, category);
           res.status(201).json({ message: 'Model created', id });
-        } catch (error) {
+        } catch (error:any) {
           console.error('Error creating model:', error);
           res.status(500).json({ 
             error: 'Failed to create model',

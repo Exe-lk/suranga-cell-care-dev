@@ -18,6 +18,7 @@ import Select from '../../../components/bootstrap/forms/Select';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { firestore } from '../../../firebaseConfig';
 import { useGetSuppliersQuery } from '../../../redux/slices/supplierApiSlice';
+import { supabase } from '../../../lib/supabase';
 
 function Index() {
 	const { data: Accstock, error: accError } = useGetStockInOutsdisQuery(undefined);
@@ -52,24 +53,19 @@ function Index() {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const dataCollection = collection(firestore, 'accessorybill');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData: any = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as any;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				console.log(firebaseData);
-				setOrders(firebaseData);
+				const { data, error }: any = await supabase.from('accessorybill').select('*');
+
+				if (error) throw error;
+
+				setOrders(data);
+				// console.log(data);
 			} catch (error) {
-				console.error('Error fetching data: ', error);
+				console.error('Error fetching data:', error);
 			}
 		};
+
 		fetchData();
 	}, []);
-
 	const currentDate = new Date().toLocaleDateString();
 	const formik = useFormik({
 		initialValues: {
