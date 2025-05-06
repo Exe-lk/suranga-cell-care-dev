@@ -57,6 +57,8 @@ const Index: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['100']);
 	const [lastDoc, setLastDoc] = useState(null);
+	const [showLowStockAlert, setShowLowStockAlert] = useState(false);
+	const [lowStockItems, setLowStockItems] = useState<any[]>([]);
 	const {
 		data: itemDiss,
 		error,
@@ -87,6 +89,25 @@ console.log(itemDiss)
 			setLastDoc(itemDiss.lastDoc);
 		}
 	}, []);
+	useEffect(() => {
+		if (itemDiss) {
+			// Find items that are at or below reorder level
+			const lowItems = itemDiss.filter((item: any) => 
+				item.quantity <= item.reorderLevel
+			);
+			setLowStockItems(lowItems);
+			if (lowItems.length > 0) {
+				setShowLowStockAlert(true);
+				// Show notification
+				Swal.fire({
+					title: 'Low Stock Alert',
+					html: `<p>${lowItems.length} item(s) are at or below reorder level</p>`,
+					icon: 'warning',
+					confirmButtonText: 'OK',
+				});
+			}
+		}
+	}, [itemDiss]);
 	const handleClickDelete = async (itemDis: any) => {
 		if (itemDis.quantity > 0) {
 			Swal.fire('Error', 'Failed to delete stock item. stock quantity must be zero', 'error');
@@ -365,6 +386,14 @@ console.log(itemDiss)
 		}
 	};
 
+	// Function to determine row styling based on stock level
+	const getRowStyle = (item: any) => {
+		if (item.quantity <= item.reorderLevel) {
+			return { backgroundColor: 'rgba(255, 193, 7, 0.2)' }; // Warning yellow background
+		}
+		return {};
+	};
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -387,6 +416,25 @@ console.log(itemDiss)
 					/>
 				</SubHeaderLeft>
 				<SubHeaderRight>
+					{showLowStockAlert && (
+						<Button
+							icon='Warning'
+							color='warning'
+							isLight
+							onClick={() => {
+								Swal.fire({
+									title: 'Low Stock Items',
+									html: lowStockItems.map((item: any) => 
+										`<p><strong>${item.brand} ${item.model}</strong> (${item.category}) - Quantity: ${item.quantity}, Reorder Level: ${item.reorderLevel}</p>`
+									).join(''),
+									icon: 'warning',
+									confirmButtonText: 'OK',
+								});
+							}}
+						>
+							{lowStockItems.length} Low Stock Items
+						</Button>
+					)}
 					<Button
 						icon='AddCircleOutline'
 						color='warning'
@@ -516,7 +564,7 @@ console.log(itemDiss)
 													)
 													.map((itemDiss: any, index: any) => (
 														<React.Fragment key={index}>
-															<tr key={index}>
+															<tr key={index} style={getRowStyle(itemDiss)}>
 																<td
 																	onClick={() => {
 																		setId(itemDiss.code),
@@ -552,6 +600,9 @@ console.log(itemDiss)
 																			toggleRow(index);
 																	}}>
 																	{itemDiss.quantity}
+																	{itemDiss.quantity <= itemDiss.reorderLevel && (
+																		<Icon icon='Warning' color='warning' className='ms-2' />
+																	)}
 																</td>
 																<td
 																	onClick={() => {

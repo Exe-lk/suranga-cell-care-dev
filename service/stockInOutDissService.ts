@@ -235,11 +235,17 @@ export const createstockIn = async (values: any) => {
 	}
   };
   export const getstockInByDate = async (date: string, searchTerm: any) => {
-	const { data, error } = await supabase
+	let query = supabase
 	  .from('Stock')
 	  .select('*')
-	  .eq('status', true)
-	  .eq('date', date);
+	  .eq('status', true);
+	
+	// If searchTerm exists, add filtering logic
+	if (searchTerm) {
+	  query = query.or(`code.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%`);
+	}
+  
+	const { data, error } = await query;
   
 	if (error) {
 	  console.error('Error fetching stock by date:', error);

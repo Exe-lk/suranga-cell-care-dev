@@ -17,7 +17,8 @@ import { supabase } from '../lib/supabase';
 
 export const Creatbill = async (values: any) => {
   values.status = true;
-  values.timestamp = new Date(); // Supabase uses JS Date format for timestamp
+  console.log(values)
+ // Supabase uses JS Date format for timestamp
   const { data, error } = await supabase
     .from('accessorybill')
     .insert([values])

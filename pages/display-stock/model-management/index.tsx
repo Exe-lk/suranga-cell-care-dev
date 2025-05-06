@@ -344,6 +344,12 @@ const Index: NextPage = () => {
 		}
 	}, [models]);
 
+	// Add a refetch effect to refresh data when component mounts
+	useEffect(() => {
+		// Refetch models data to ensure we have the latest data after category updates
+		refetch();
+	}, [refetch]);
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -357,7 +363,7 @@ const Index: NextPage = () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
+						placeholder='Search by model, category or brand...'
 						onChange={(event: any) => {
 							setSearchTerm(event.target.value);
 						}}
@@ -472,6 +478,12 @@ const Index: NextPage = () => {
 												.filter((model: any) =>
 													searchTerm
 														? model.name
+																.toLowerCase()
+																.includes(searchTerm.toLowerCase()) ||
+														  model.category
+																.toLowerCase()
+																.includes(searchTerm.toLowerCase()) ||
+														  model.brand
 																.toLowerCase()
 																.includes(searchTerm.toLowerCase())
 														: true,

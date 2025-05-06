@@ -20,6 +20,7 @@ import Page from '../../../layout/Page/Page';
 import Spinner from '../../../components/bootstrap/Spinner';
 import { useGetItemAccesQuery } from '../../../redux/slices/itemManagementAcceApiSlice';
 import { number } from 'prop-types';
+import { supabase } from '../../../lib/supabase';
 
 function index() {
 	const [orderedItems, setOrderedItems] = useState<any[]>([]);
@@ -79,20 +80,22 @@ function index() {
 	}, []);
 	useEffect(() => {
 		const fetchData = async () => {
-			try {
-				const querySnapshot = await getDocs(collection(firestore, 'customer'));
-				const dataList = querySnapshot.docs.map((doc) => ({
-					...doc.data(),
-				}));
-				setCustomer(dataList);
-				// console.log(dataList);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
+		  try {
+			const { data, error } = await supabase
+			  .from('customer')
+			  .select('*');
+	
+			if (error) throw error;
+	
+			setCustomer(data);
+			// console.log(data);
+		  } catch (error) {
+			console.error('Error fetching data:', error);
+		  }
 		};
-
+	
 		fetchData();
-	}, [orderedItems]);
+	  }, [orderedItems]);
 
 	const contactchanget = async (value: any) => {
 		if (value.length > 1 && value.startsWith('0')) {
@@ -112,28 +115,48 @@ function index() {
 			}
 		}
 	};
+	// useEffect(() => {
+	// 	const fetchData = async () => {
+	// 		try {
+	// 			const querySnapshot = await getDocs(collection(firestore, 'accessorybill'));
+	// 			const dataList = querySnapshot.docs.map((doc) => ({
+	// 				id: parseInt(doc.id, 10), // Ensure `id` is a number
+	// 				...doc.data(),
+	// 			}));
+	// 			// console.log('Data List:', dataList);
+	// 			const largestId = dataList.reduce(
+	// 				(max, item) => (item.id > max ? item.id : max),
+	// 				0,
+	// 			);
+	// 			// console.log('Largest ID:', largestId);
+	// 			setId(largestId + 1);
+	// 		} catch (error) {
+	// 			console.error('Error fetching data: ', error);
+	// 		}
+	// 	};
+
+	// 	fetchData();
+	// }, [orderedItems]);
 	useEffect(() => {
 		const fetchData = async () => {
-			try {
-				const querySnapshot = await getDocs(collection(firestore, 'accessorybill'));
-				const dataList = querySnapshot.docs.map((doc) => ({
-					id: parseInt(doc.id, 10), // Ensure `id` is a number
-					...doc.data(),
-				}));
-				// console.log('Data List:', dataList);
-				const largestId = dataList.reduce(
-					(max, item) => (item.id > max ? item.id : max),
-					0,
-				);
-				// console.log('Largest ID:', largestId);
-				setId(largestId + 1);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
+		  try {
+			const { data, error } = await supabase
+			  .from('accessorybill')
+			  .select('id')
+			  .order('id', { ascending: false })
+			  .limit(1);
+	  
+			if (error) throw error;
+	  
+			const largestId = data?.[0]?.id || 0;
+			setId(largestId + 1);
+		  } catch (error:any) {
+			console.error('Error fetching max ID:', error.message);
+		  }
 		};
-
+	  
 		fetchData();
-	}, [orderedItems]);
+	  }, [orderedItems]);
 
 	useEffect(() => {
 		if (dropdownRef.current) {

@@ -25,6 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return;
         }
         await updateCategory(id as string, name, status);
+        
+        // Add cache-control headers to ensure fresh data
+        res.setHeader('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
         res.status(200).json({ message: 'Category updated' });
         break;
       }

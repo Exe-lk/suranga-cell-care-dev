@@ -50,6 +50,12 @@ const Index: NextPage = () => {
 		}
 	}, [brands]);
 
+	// Add a refetch effect to refresh data when component mounts
+	useEffect(() => {
+		// Refetch brands data to ensure we have the latest data after category updates
+		refetch();
+	}, [refetch]);
+
 	const handleClickDelete = async (brand: any) => {
 		const isCategoryLinked = models.some((model: any) => model.brand === brand.name && model.category===brand.category);
 

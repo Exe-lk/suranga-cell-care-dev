@@ -3,9 +3,9 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const brandApiSlice = createApi({
   reducerPath: 'brandApi',
 
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'  }),
+  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'   }),
 
-  tagTypes: ['Brand'],
+  tagTypes: ['Brand', 'Category'],
   endpoints: (builder) => ({
     getBrands: builder.query({
       query: () => 'brand/route',
@@ -33,14 +33,14 @@ export const brandApiSlice = createApi({
         method: 'PUT',
         body: updatedBrand,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Brand', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Brand', id }, 'Brand'],
     }),
     deleteBrand: builder.mutation({
       query: (id) => ({
         url: `brand/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'Brand', id }],
+      invalidatesTags: (result, error, id) => [{ type: 'Brand', id }, 'Brand'],
     }),
   }),
 });

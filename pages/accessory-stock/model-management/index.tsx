@@ -60,6 +60,12 @@ const Index: NextPage = () => {
 		}
 	}, [models ]);
 
+	// Add a refetch effect to refresh data when component mounts
+	useEffect(() => {
+		// Refetch models data to ensure we have the latest data after category updates
+		refetch();
+	}, [refetch]);
+
 	const handleClickDelete = async (model: any) => {
 		const isCategoryLinked = itemAcces.some((itemAcces: any) =>
 			itemAcces.model === model.name &&
@@ -354,7 +360,7 @@ const downloadTableAsSVG = async () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
+						placeholder='Search by model, category or brand...'
 						onChange={(event: any) => {
 							setSearchTerm(event.target.value);
 						}}

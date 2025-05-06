@@ -202,14 +202,16 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({
 											icon='Restore'
 											tag='a'
 											color='info'
-											onClick={() => handleClickRestore(category)}>
+											onClick={() => handleClickRestore(category)}
+												isDisable={!categories || categories.length === 0 || isLoading}>
 											Restore
 										</Button>
 										<Button
 											className='m-2'
 											icon='Delete'
 											color='danger'
-											onClick={() => handleClickDelete(category)}>
+											onClick={() => handleClickDelete(category)}
+													isDisable={!categories || categories.length === 0 || isLoading}>
 											Delete
 										</Button>
 									</td>

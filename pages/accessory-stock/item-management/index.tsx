@@ -269,46 +269,33 @@ const Index: NextPage = () => {
 														? selectedUsers.includes(itemAcces.type)
 														: true,
 												)
-												
-												// .filter((brand: any) => {
-												// 	const search = searchTerm.toLowerCase();
-												// 	return (
-												// 		brand.code
-												// 			?.toString()
-												// 			.toLowerCase()
-												// 			.includes(searchTerm.slice(0, 4)) ||
-												// 		(brand.brand + ' ' + brand.model)
-												// 			?.toLowerCase()
-												// 			.includes(search) ||
-												// 		(
-												// 			brand.category +
-												// 			' ' +
-												// 			brand.brand +
-												// 			' ' +
-												// 			brand.model
-												// 		)
-												// 			?.toLowerCase()
-												// 			.includes(search) ||
-												// 		(
-												// 			brand.category +
-												// 			' ' +
-												// 			brand.model +
-												// 			' ' +
-												// 			brand.brand
-												// 		)
-												// 			?.toLowerCase()
-												// 			.includes(search) ||
-												// 		brand.model
-												// 			?.toLowerCase()
-												// 			.includes(search) ||
-												// 		brand.brand
-												// 			?.toLowerCase()
-												// 			.includes(search) ||
-												// 		brand.category
-												// 			?.toLowerCase()
-												// 			.includes(search)
-												// 	);
-												// })
+												.filter((item: any) => {
+													const search = searchTerm.toLowerCase();
+													return (
+														item.code
+															?.toString()
+															.toLowerCase()
+															.includes(search) ||
+														item.category
+															?.toLowerCase()
+															.includes(search) ||
+														item.brand
+															?.toLowerCase()
+															.includes(search) ||
+														item.model
+															?.toLowerCase()
+															.includes(search) ||
+														(item.brand + ' ' + item.model)
+															?.toLowerCase()
+															.includes(search) ||
+														(item.category + ' ' + item.brand + ' ' + item.model)
+															?.toLowerCase()
+															.includes(search) ||
+														(item.category + ' ' + item.model + ' ' + item.brand)
+															?.toLowerCase()
+															.includes(search)
+													);
+												})
 												.sort((a: any, b: any) => b.code - a.code)
 												.map((itemAcces: any, index: any) => (
 													<tr key={index}>
