@@ -55,14 +55,23 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				await refetch();
 		
 				const trimmedName = values.name.trim();
-				const trimmedCategory  = values.category.trim();
+				const trimmedCategory = values.category.trim();
+				
+				if (!trimmedName || !trimmedCategory) {
+					await Swal.fire({
+						icon: 'error',
+						title: 'Validation Error',
+						text: 'Both brand name and category are required.',
+					});
+					return;
+				}
+				
 				const existingBrand = BrandData?.find(
 					(brand: { name: string; category: string }) =>
 						brand.name.toLowerCase() === trimmedName.toLowerCase() &&
 						brand.category.toLowerCase() === trimmedCategory.toLowerCase()				
-					);
+				);
 				
-		
 				if (existingBrand) {
 					await Swal.fire({
 						icon: 'error',
@@ -72,17 +81,22 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					return;
 				}
 
-				const process = Swal.fire({
+				const processingSwal = Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
 					allowOutsideClick: false,
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
+				
 				try {
-					const response: any = await addBrand({
-						...values, name: trimmedName, category: trimmedCategory
+					const response = await addBrand({
+						name: trimmedName, 
+						category: trimmedCategory,
+						status: true
 					}).unwrap();
+					
+					await processingSwal;
 					refetch();
 					await Swal.fire({
 						icon: 'success',
@@ -91,17 +105,22 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					formik.resetForm();
 					setIsOpen(false);
 				} catch (error) {
-					console.error('Error during handleSubmit: ', error);
+					await processingSwal;
+					console.error('Error during brand creation: ', error);
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to add the brand. Please try again.',
+						text: error.data?.details || error.data?.error || 'Failed to add the brand. Please try again.',
 					});
 				}
 			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				Swal.close;
-				alert('An error occurred during file upload. Please try again later.');
+				console.error('Error during form submission: ', error);
+				Swal.close();
+				Swal.fire({
+					icon: 'error',
+					title: 'Error',
+					text: 'An unexpected error occurred. Please try again later.',
+				});
 			}
 		},
 	});

@@ -147,14 +147,14 @@ export const createModel = async (
   
 	const { data, error } = await supabase
 	  .from('ModelAccessory')
-	  .insert([{ name, description, brand, category, status}]);
+	  .insert([{ name, description, brand, category, status, timestamp }]);
   
 	if (error) {
 	  console.error('Error creating model:', error);
-	  return null;
+	  throw error;
 	}
   
-	return data?.[0];
+	return data?.[0]?.id;
   };
   export const getModel = async () => {
 	const { data, error } = await supabase
@@ -166,8 +166,11 @@ export const createModel = async (
 	  console.error('Error fetching models:', error);
 	  return [];
 	}
+	console.log("Error:", error)
+	
   
 	return data;
+	console.log("Model:", data)
   };
   export const getDeleteModel = async () => {
 	const { data, error } = await supabase

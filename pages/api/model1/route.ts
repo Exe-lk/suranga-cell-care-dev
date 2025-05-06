@@ -15,8 +15,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           res.status(400).json({ error: 'Name is required' });
           return;
         }
-        const id = await createModel(name, description, brand, category);
-        res.status(201).json({ message: 'Model created', id });
+        try {
+          const id = await createModel(name, description, brand, category);
+          res.status(201).json({ message: 'Model created', id });
+        } catch (error) {
+          console.error('Error creating model:', error);
+          res.status(500).json({ 
+            error: 'Failed to create model',
+            details: error.message || error 
+          });
+        }
         break;
       }
       case 'GET': {

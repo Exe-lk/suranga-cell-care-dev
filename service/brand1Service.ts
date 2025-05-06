@@ -128,6 +128,7 @@ import { supabase } from '../lib/supabase';
 
 // Create a new brand
 export const createBrand = async (category: string, name: string) => {
+
 	console.log(category)
 	const { data, error } = await supabase
 		.from('BrandAccessory')
@@ -138,6 +139,7 @@ export const createBrand = async (category: string, name: string) => {
 	if (error) throw error;
 	
 	return data.id;
+
 };
 
 // Get active brands
@@ -240,6 +242,26 @@ export const updateBrand = async (id: string, category: string, name: string, st
 			.in('id', stockIds);
 
 		if (stockUpdateError) throw stockUpdateError;
+	}
+
+	// 5. Update related models in ModelAccessory table
+	const { data: modelDocs, error: modelFetchError } = await supabase
+		.from('ModelAccessory')
+		.select('id')
+		.eq('brand', oldName)
+		.eq('category', oldCategory);
+
+	if (modelFetchError) throw modelFetchError;
+
+	if (modelDocs.length > 0) {
+		const modelIds = modelDocs.map((doc: any) => doc.id);
+
+		const { error: modelUpdateError } = await supabase
+			.from('ModelAccessory')
+			.update({ brand: name, category })
+			.in('id', modelIds);
+
+		if (modelUpdateError) throw modelUpdateError;
 	}
 };
 

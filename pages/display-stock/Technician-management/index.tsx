@@ -324,7 +324,7 @@ const Index: NextPage = () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
+						placeholder='Search by name or technician number...'
 						onChange={(event: any) => {
 							setSearchTerm(event.target.value);
 						}}
@@ -399,6 +399,9 @@ const Index: NextPage = () => {
 												.filter((technician: any) =>
 													searchTerm
 														? technician.name
+																.toLowerCase()
+																.includes(searchTerm.toLowerCase()) ||
+														  technician.technicianNum
 																.toLowerCase()
 																.includes(searchTerm.toLowerCase())
 														: true,

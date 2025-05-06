@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-export const createCategory = async (name: string) => {
+export const createCategory = async (name: string) => {console.log(name);
 	const status = true;
 	const timestamp = new Date();
 	const { data, error } = await supabase
@@ -20,6 +20,7 @@ export const getCategory = async () => {
 		.eq('status', true);
 
 	if (error) throw error;
+
 	return data;
 };
 
@@ -105,6 +106,36 @@ export const updateCategory = async (id: string, newName: string, status: boolea
 				.from('Stock')
 				.update({ category: newName })
 				.eq('id', stock.id);
+		}
+
+		// Update matching Brand records
+		const { data: brands, error: brandErr } = await supabase
+			.from('BrandDisplay')
+			.select('id')
+			.eq('category', oldName);
+
+		if (brandErr) throw brandErr;
+
+		for (const brand of brands) {
+			await supabase
+				.from('BrandDisplay')
+				.update({ category: newName })
+				.eq('id', brand.id);
+		}
+
+		// Update matching Model records
+		const { data: models, error: modelErr } = await supabase
+			.from('ModelDisplay')
+			.select('id')
+			.eq('category', oldName);
+
+		if (modelErr) throw modelErr;
+
+		for (const model of models) {
+			await supabase
+				.from('ModelDisplay')
+				.update({ category: newName })
+				.eq('id', model.id);
 		}
 
 		console.log(`Updated category and reflected changes in related tables.`);

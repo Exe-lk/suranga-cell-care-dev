@@ -7,7 +7,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		try {
 			const { page, perPage, lastDoc, searchTerm }: any = req.query;
 			const perPageNumber = parseInt(perPage, 10) || 10;
-			if (searchTerm == '') {
+			if (!searchTerm || searchTerm === '') {
 				let q = query(
 					collection(firestore, 'ItemManagementAcce'),
 					orderBy('code'),
@@ -28,16 +28,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					id: doc.id,
 					...doc.data(),
 				}));
-				// const filteredData = searchTerm
-				// 	? data.filter((item: any) => {
-				// 			// Check if any field contains the searchTerm (case-insensitive)
-				// 			return Object.values(item).some(
-				// 				(value: any) =>
-				// 					typeof value === 'string' &&
-				// 					value.toLowerCase().includes(searchTerm.toLowerCase()),
-				// 			);
-				// 	  })
-				// 	: data;
 
 				// Get the last document for pagination
 				const lastDocRef = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
@@ -47,50 +37,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					lastDoc: lastDocRef,
 				});
 			} else {
-				const qCode = query(
+				// Get all documents to perform filtering with JavaScript
+				// This is necessary because Firestore doesn't support advanced text search/contains operation
+				const q = query(
 					collection(firestore, 'ItemManagementAcce'),
-					where('code', '==', searchTerm),
+					where('status', '==', true)
 				);
-				const qCategory = query(
-					collection(firestore, 'ItemManagementAcce'),
-					where('category', '==', searchTerm),
-				);
-                const qBrand = query(
-					collection(firestore, 'ItemManagementAcce'),
-					where('brand', '==', searchTerm),
-				);
-                const qModel = query(
-					collection(firestore, 'ItemManagementAcce'),
-					where('model', '==', searchTerm),
-				);
+				
+				const querySnapshot = await getDocs(q);
+				
+				// Filter items client-side to match search term
+				const allData = querySnapshot.docs.map((doc) => ({
+					id: doc.id,
+					...doc.data(),
+				}));
+				
+				// Perform the search on multiple fields
+				const searchTermLower = searchTerm.toLowerCase();
+				const filteredData = allData.filter((item: any) => {
+					return (
+						// Search by code
+						(item.code?.toString().toLowerCase().includes(searchTermLower)) ||
+						// Search by category
+						(item.category?.toLowerCase().includes(searchTermLower)) ||
+						// Search by brand
+						(item.brand?.toLowerCase().includes(searchTermLower)) ||
+						// Search by model
+						(item.model?.toLowerCase().includes(searchTermLower)) ||
+						// Combined searches
+						((item.brand + ' ' + item.model)?.toLowerCase().includes(searchTermLower)) ||
+						((item.category + ' ' + item.brand + ' ' + item.model)?.toLowerCase().includes(searchTermLower)) ||
+						((item.category + ' ' + item.model + ' ' + item.brand)?.toLowerCase().includes(searchTermLower))
+					);
+				});
 
-				Promise.all([getDocs(qCode), getDocs(qCategory),getDocs(qBrand),getDocs(qModel)])
-					.then(([snapshotCode, snapshotCategory,snapshotBrand,snapshotModel]) => {
-						const results = [...snapshotCode.docs, ...snapshotCategory.docs,...snapshotBrand.docs,...snapshotModel.docs];
-
-						// Deduplicate documents based on their ID
-						const uniqueResults = Array.from(new Set(results.map((doc) => doc.id))).map(
-							(id) => results.find((doc) => doc.id === id),
-						);
-
-						// Convert documents to JSON format
-						const data = uniqueResults.map((doc: any) => ({
-							id: doc.id, // Include document ID
-							...doc.data(), // Spread document fields
-						}));
-
-						res.status(200).json({
-							data: data,
-							lastDoc:
-								uniqueResults.length > 0
-									? uniqueResults[uniqueResults.length - 1]
-									: null,
-						});
-					})
-					.catch((error) => {
-						console.error('Error fetching documents: ', error);
-						res.status(500).json({ error: 'Internal Server Error' });
-					});
+				res.status(200).json({
+					data: filteredData,
+					lastDoc: null, // Pagination not supported with client-side filtering
+				});
 			}
 		} catch (error: any) {
 			res.status(500).json({ error: error.message });

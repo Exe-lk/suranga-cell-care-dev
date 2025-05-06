@@ -63,13 +63,22 @@ const Index: NextPage = () => {
 	}, [ categories]);
 
 	const handleClickDelete = async (category: any) => {
-		const isCategoryLinked = brands.some((brand:any) => brand.category === category.name);
-
-		if (isCategoryLinked) {
+		// Check if any brands are using this category
+		const linkedBrands = brands.filter((brand: any) => brand.category === category.name && brand.status === true);
+		
+		if (linkedBrands.length > 0) {
+			// Create a list of brand names that are using this category
+			const brandNames = linkedBrands.map((brand: any) => brand.name).join(', ');
 			
-			Swal.fire('Error', 'Failed to delete category. please delete the brands related to this.', 'error');
+			Swal.fire({
+				title: 'Cannot Delete Category',
+				html: `This category cannot be deleted because it is being used by the following brand(s):<br><br><strong>${brandNames}</strong><br><br>Please delete these brands first before deleting this category.`,
+				icon: 'warning',
+				confirmButtonText: 'OK'
+			});
 			return; 
 		}
+
 		try {
 			const result = await Swal.fire({
 				title: 'Are you sure?',
@@ -100,7 +109,7 @@ const Index: NextPage = () => {
 			}
 		} catch (error) {
 			console.error('Error deleting document: ', error);
-			Swal.fire('Error', 'Failed to delete brand.', 'error');
+			Swal.fire('Error', 'Failed to delete category.', 'error');
 		}
 	};
 
