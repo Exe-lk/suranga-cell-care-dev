@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../bootstrap/Modal';
@@ -17,70 +17,9 @@ interface CategoryEditModalProps {
 
 const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [addCategory, { isLoading }] = useAddCategory1Mutation();
-	const { data: categoryData,refetch } = useGetCategories1Query(undefined);
+	const { data: categoryData, refetch } = useGetCategories1Query(undefined);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	console.log(categoryData);
-
-	// const formik = useFormik({
-	// 	initialValues: {
-	// 		name: '',
-	// 		status: true,
-	// 	},
-	// 	validate: (values) => {
-	// 		const errors: {
-	// 			name?: string;
-	// 		} = {};
-	// 		if (!values.name) {
-	// 			errors.name = 'Required';
-	// 		}
-	// 		return errors;
-	// 	},
-	// 	onSubmit: async (values) => {
-	// 		try {
-	// 			await refetch();
-		
-	// 			const existingCategory = categoryData?.find(
-	// 				(category: { name: string }) => category.name.toLowerCase() === values.name.toLowerCase()
-	// 			);
-		
-	// 			if (existingCategory) {
-	// 				await Swal.fire({
-	// 					icon: 'error',
-	// 					title: 'Duplicate Category',
-	// 					text: 'A category with this name already exists.',
-	// 				});
-	// 				return;
-	// 			}
-		
-	// 			Swal.fire({
-	// 				title: 'Processing...',
-	// 				html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
-	// 				allowOutsideClick: false,
-	// 				showCancelButton: false,
-	// 				showConfirmButton: false,
-	// 			});
-		
-	// 			const response: any = await addCategory(values).unwrap();
-		
-	// 			refetch();
-		
-	// 			await Swal.fire({
-	// 				icon: 'success',
-	// 				title: 'Category Created Successfully',
-	// 			});
-		
-	// 			formik.resetForm();
-	// 			setIsOpen(false);
-	// 		} catch (error) {
-	// 			console.error('Error during handleSubmit:', error);
-	// 			await Swal.fire({
-	// 				icon: 'error',
-	// 				title: 'Error',
-	// 				text: 'Failed to add the category. Please try again.',
-	// 			});
-	// 		}
-	// 	},		
-		
-	// });
 
 	const formik = useFormik({
 		initialValues: {
@@ -101,6 +40,9 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 			return errors;
 		},
 		onSubmit: async (values) => {
+			if (isSubmitting) return; // Prevent multiple submissions
+			setIsSubmitting(true); // Set submitting state to true
+			
 			try {
 				await refetch();
 	
@@ -115,6 +57,7 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 						title: 'Duplicate Category',
 						text: 'A category with this name already exists.',
 					});
+					setIsSubmitting(false); // Reset submitting state
 					return;
 				}
 	
@@ -144,6 +87,8 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 					title: 'Error',
 					text: 'Failed to add the category. Please try again.',
 				});
+			} finally {
+				setIsSubmitting(false); // Reset submitting state
 			}
 		},
 	});	
@@ -174,8 +119,11 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit}>
-				Create Category
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit}
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Category'}
 				</Button>
 			</ModalFooter>
 		</Modal>

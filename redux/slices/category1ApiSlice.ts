@@ -6,7 +6,7 @@ export const category1ApiSlice = createApi({
   tagTypes: ['Category1'],
   endpoints: (builder) => ({
     getCategories1: builder.query({
-      query: () => 'category1/route',
+      query: (searchTerm) => searchTerm ? `category1/route?search=${searchTerm}` : 'category1/route',
       providesTags: ['Category1'],
     }),
     getCategory1ById: builder.query({

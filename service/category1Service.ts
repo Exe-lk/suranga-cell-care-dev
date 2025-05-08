@@ -227,3 +227,19 @@ export const createCategory = async (name: string) => {
 	}
   };
   
+// Search Categories
+export const searchCategories = async (searchTerm: string) => {
+  const { data, error } = await supabase
+    .from('CategoryAccessory')
+    .select('*')
+    .eq('status', true)
+    .ilike('name', `%${searchTerm}%`);
+
+  if (error) {
+    console.error('Error searching categories:', error);
+    return [];
+  }
+
+  return data;
+};
+  

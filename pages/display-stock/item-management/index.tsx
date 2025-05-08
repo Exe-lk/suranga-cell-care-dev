@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -47,6 +47,7 @@ import { tr } from 'date-fns/locale';
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [returnModalStatus, setReturnModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
@@ -64,8 +65,7 @@ const Index: NextPage = () => {
 		error,
 		isLoading,
 		refetch,
-	} = useGetItemDiss1Query({ page: currentPage, perPage, lastDoc, searchtearm: searchTerm });
-console.log(itemDiss)
+	} = useGetItemDissQuery(debouncedSearchTerm);
 	const {
 		data: StockInOuts,
 		error: stockInOutError,
@@ -76,6 +76,7 @@ console.log(itemDiss)
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [formStatus, setFormStatus] = useState<boolean>(false);
 	const [expandedRow, setExpandedRow] = useState(null);
+	const [lowStockAlertShown, setLowStockAlertShown] = useState(false);
 	const toggleRow = (index: any) => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
@@ -89,8 +90,10 @@ console.log(itemDiss)
 			setLastDoc(itemDiss.lastDoc);
 		}
 	}, []);
+	
+	// Check for low stock items and show alert only once on initial load
 	useEffect(() => {
-		if (itemDiss) {
+		if (itemDiss && !lowStockAlertShown) {
 			// Find items that are at or below reorder level
 			const lowItems = itemDiss.filter((item: any) => 
 				item.quantity <= item.reorderLevel
@@ -98,7 +101,8 @@ console.log(itemDiss)
 			setLowStockItems(lowItems);
 			if (lowItems.length > 0) {
 				setShowLowStockAlert(true);
-				// Show notification
+				setLowStockAlertShown(true);
+				// Show notification only on initial load
 				Swal.fire({
 					title: 'Low Stock Alert',
 					html: `<p>${lowItems.length} item(s) are at or below reorder level</p>`,
@@ -107,7 +111,7 @@ console.log(itemDiss)
 				});
 			}
 		}
-	}, [itemDiss]);
+	}, [itemDiss, lowStockAlertShown]);
 	const handleClickDelete = async (itemDis: any) => {
 		if (itemDis.quantity > 0) {
 			Swal.fire('Error', 'Failed to delete stock item. stock quantity must be zero', 'error');
@@ -394,6 +398,21 @@ console.log(itemDiss)
 		return {};
 	};
 
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Update the search input handler
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -407,10 +426,8 @@ console.log(itemDiss)
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						placeholder='Search by model, brand, category or box number...'
+						onChange={handleSearch}
 						value={searchTerm}
 						ref={inputRef}
 					/>
@@ -424,9 +441,59 @@ console.log(itemDiss)
 							onClick={() => {
 								Swal.fire({
 									title: 'Low Stock Items',
-									html: lowStockItems.map((item: any) => 
-										`<p><strong>${item.brand} ${item.model}</strong> (${item.category}) - Quantity: ${item.quantity}, Reorder Level: ${item.reorderLevel}</p>`
-									).join(''),
+									html: `
+										<div class="low-stock-container">
+											<table class="low-stock-table">
+												<thead>
+													<tr>
+														<th>Item</th>
+														<th>Category</th>
+														<th>Quantity</th>
+														<th>Reorder Level</th>
+													</tr>
+												</thead>
+												<tbody>
+													${lowStockItems.map((item: any) => `
+														<tr class="${item.quantity < item.reorderLevel ? 'critical-stock' : 'low-stock'}">
+															<td><strong>${item.brand} ${item.model}</strong></td>
+															<td>${item.category}</td>
+															<td>${item.quantity}</td>
+															<td>${item.reorderLevel}</td>
+														</tr>
+													`).join('')}
+												</tbody>
+											</table>
+										</div>
+										<style>
+											.low-stock-container {
+												max-height: 60vh;
+												overflow-y: auto;
+												margin-top: 10px;
+											}
+											.low-stock-table {
+												width: 100%;
+												border-collapse: collapse;
+												margin-bottom: 0;
+											}
+											.low-stock-table th,
+											.low-stock-table td {
+												padding: 8px;
+												text-align: left;
+												border-bottom: 1px solid #ddd;
+											}
+											.low-stock-table th {
+												background-color: #f2f2f2;
+												font-weight: bold;
+											}
+											.critical-stock {
+												background-color: rgba(255, 0, 0, 0.1);
+											}
+											.low-stock {
+												background-color: rgba(255, 193, 7, 0.1);
+											}
+										</style>
+									`,
+									width: '600px',
 									icon: 'warning',
 									confirmButtonText: 'OK',
 								});
@@ -520,96 +587,54 @@ console.log(itemDiss)
 											)}
 											{itemDiss &&
 												dataPagination(itemDiss, currentPage, perPage)
-													?.filter((brand: any) => {
-														const search = searchTerm.toLowerCase();
-														return (
-															brand.code
-																?.toString()
-																.toLowerCase()
-																.includes(searchTerm.slice(0, 4)) ||
-															(brand.brand + ' ' + brand.model)
-																?.toLowerCase()
-																.includes(search) ||
-															(
-																brand.category +
-																' ' +
-																brand.brand +
-																' ' +
-																brand.model
-															)
-																?.toLowerCase()
-																.includes(search) ||
-															(
-																brand.category +
-																' ' +
-																brand.model +
-																' ' +
-																brand.brand
-															)
-																?.toLowerCase()
-																.includes(search) ||
-															brand.model
-																?.toLowerCase()
-																.includes(search) ||
-															brand.brand
-																?.toLowerCase()
-																.includes(search) ||
-															brand.category
-																?.toLowerCase()
-																.includes(search)
-														);
-													})
-													.sort(
-														(a: any, b: any) => a.quantity - b.quantity,
-													)
-													.map((itemDiss: any, index: any) => (
+													.map((item: any, index: any) => (
 														<React.Fragment key={index}>
-															<tr key={index} style={getRowStyle(itemDiss)}>
+															<tr key={index} style={getRowStyle(item)}>
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.code}
+																	{item.code}
 																</td>
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.model}
+																	{item.model}
 																</td>
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.brand}
+																	{item.brand}
 																</td>
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.category}
+																	{item.category}
 																</td>
 																{/* <td>{itemDiss.reorderLevel}</td> */}
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.quantity}
-																	{itemDiss.quantity <= itemDiss.reorderLevel && (
+																	{item.quantity}
+																	{item.quantity <= item.reorderLevel && (
 																		<Icon icon='Warning' color='warning' className='ms-2' />
 																	)}
 																</td>
 																<td
 																	onClick={() => {
-																		setId(itemDiss.code),
+																		setId(item.code),
 																			toggleRow(index);
 																	}}>
-																	{itemDiss.boxNumber}
+																	{item.boxNumber}
 																</td>
 
 																<td>
@@ -621,9 +646,9 @@ console.log(itemDiss)
 																			setAddstockModalStatus(
 																				true,
 																			);
-																			setId(itemDiss.id);
+																			setId(item.id);
 																			setQuantity(
-																				itemDiss.quantity,
+																				item.quantity,
 																			);
 																		}}></Button>
 																</td>
@@ -637,9 +662,9 @@ console.log(itemDiss)
 																			setEditstockModalStatus(
 																				true,
 																			),
-																			setId(itemDiss.id),
+																			setId(item.id),
 																			setQuantity(
-																				itemDiss.quantity,
+																				item.quantity,
 																			)
 																		)}></Button>
 																</td>
@@ -652,7 +677,7 @@ console.log(itemDiss)
 																			setEditModalStatus(
 																				true,
 																			),
-																			setId(itemDiss.id)
+																			setId(item.id)
 																		)}></Button>
 																</td>
 																<td>
@@ -662,7 +687,7 @@ console.log(itemDiss)
 																		color='danger'
 																		onClick={() =>
 																			handleClickDelete(
-																				itemDiss,
+																				item,
 																			)
 																		}></Button>
 																</td>

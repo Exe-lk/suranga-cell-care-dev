@@ -152,3 +152,14 @@ export const deleteCategory = async (id: string) => {
 
 	if (error) throw error;
 };
+
+export const searchCategories = async (searchTerm: string) => {
+	const { data, error } = await supabase
+		.from('CategoryDisplay')
+		.select('*')
+		.eq('status', true)
+		.ilike('name', `%${searchTerm}%`);
+
+	if (error) throw error;
+	return data;
+};

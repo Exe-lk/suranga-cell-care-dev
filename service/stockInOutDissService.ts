@@ -240,16 +240,21 @@ export const createstockIn = async (values: any) => {
 	  .select('*')
 	  .eq('status', true);
 	
-	// If searchTerm exists, add filtering logic
+	// Add date filter if provided
+	if (date) {
+	  query = query.eq('date', date);
+	}
+	
+	// Add search filter if provided
 	if (searchTerm) {
-	  query = query.or(`code.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%`);
+	  query = query.or(`barcode.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,suppName.ilike.%${searchTerm}%`);
 	}
   
 	const { data, error } = await query;
   
 	if (error) {
-	  console.error('Error fetching stock by date:', error);
-	  throw error;
+	  console.error('Error fetching stock by date with search:', error);
+	  return [];
 	}
   
 	return data;

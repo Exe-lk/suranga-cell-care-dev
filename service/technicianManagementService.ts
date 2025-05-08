@@ -135,3 +135,15 @@ export const deleteTechnician = async (id: string) => {
   if (error) throw error;
   return data;
 };
+
+// Search Technicians
+export const searchTechnicians = async (searchTerm: string) => {
+  const { data, error } = await supabase
+    .from('technicians')
+    .select('*')
+    .eq('status', true)
+    .or(`name.ilike.%${searchTerm}%,technicianNum.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%,mobileNumber.ilike.%${searchTerm}%`);
+
+  if (error) throw error;
+  return data;
+};

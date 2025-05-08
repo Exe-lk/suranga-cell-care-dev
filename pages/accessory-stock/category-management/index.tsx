@@ -1,4 +1,4 @@
-import React, {  useEffect, useRef, useState } from 'react';
+import React, {  useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -19,7 +19,7 @@ import Swal from 'sweetalert2';
 import { useGetCategories1Query , useUpdateCategory1Mutation} from '../../../redux/slices/category1ApiSlice';
 import bill from '../../../assets/img/bill/WhatsApp_Image_2024-09-12_at_12.26.10_50606195-removebg-preview (1).png';
 import { toPng, toSvg } from 'html-to-image';
-import { DropdownItem }from '../../../components/bootstrap/Dropdown';
+import { DropdownItem } from '../../../components/bootstrap/Dropdown';
 import jsPDF from 'jspdf'; 
 import autoTable from 'jspdf-autotable';
 import PaginationButtons, {
@@ -36,12 +36,12 @@ interface Category {
 
 const Index: NextPage = () => {
 	const [searchTerm, setSearchTerm] = useState(''); 
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false); 
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false); 
 	const [id, setId] = useState<string>(''); 
-	const { data: categories, error, isLoading, refetch } = useGetCategories1Query(undefined);
-	console.log(categories);
+	const { data: categories, error, isLoading, refetch } = useGetCategories1Query(debouncedSearchTerm);
 	const [updateCategory] = useUpdateCategory1Mutation();
 	const { data: brands } = useGetBrands1Query(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
@@ -52,7 +52,24 @@ const Index: NextPage = () => {
 		if (inputRef.current) {
 			inputRef.current.focus();
 		}
-	}, [categories ]);
+	}, [categories]);
+
+	// Debounce search term to minimize API calls
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+			// This triggers a new API call with the updated search term
+			// Search is performed directly on the database rather than client-side filtering
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Handle search input changes
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
 
 	const handleClickDelete = async (category: any) => {
 		const isCategoryLinked = brands.some((brand:any) => brand.category === category.name);
@@ -333,15 +350,13 @@ const Index: NextPage = () => {
 						<Icon icon='Search' size='2x' color='primary' />
 					</label>
 					<Input
-					ref={inputRef}
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						placeholder='Search categories by name...'
+						onChange={handleSearch}
 						value={searchTerm}
+						ref={inputRef}
 					/>
 				</SubHeaderLeft>
 				<SubHeaderRight>
@@ -402,11 +417,6 @@ const Index: NextPage = () => {
 											dataPagination(categories, currentPage, perPage)
 												.filter((category : any) =>
 													category.status === true 
-												)
-												.filter((category : any) => 
-													searchTerm 
-													? category.name.toLowerCase().includes(searchTerm.toLowerCase())
-													: true,
 												)
 												.map((category:any, index: any) => (
 													<tr key={index}>

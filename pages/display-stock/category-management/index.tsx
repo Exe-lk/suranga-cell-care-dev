@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -42,13 +42,14 @@ interface Category {
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState(''); 
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false); 
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false); 
 	const [category, setcategory] = useState<Category[]>([]); 
 	const [id, setId] = useState<string>(''); 
 	const [status, setStatus] = useState(true); 
-	const { data: categories, error, isLoading, refetch } = useGetCategoriesQuery(undefined);
+	const { data: categories, error, isLoading, refetch } = useGetCategoriesQuery(debouncedSearchTerm);
 	const { data: brands } = useGetBrandsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
@@ -61,6 +62,15 @@ const Index: NextPage = () => {
 		}
 
 	}, [ categories]);
+
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
 
 	const handleClickDelete = async (category: any) => {
 		// Check if any brands are using this category
@@ -340,6 +350,12 @@ try {
 }
 };
 
+	// Update the search input handler
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -354,9 +370,7 @@ try {
 						type='search'
 						className='border-0 shadow-none bg-transparent'
 						placeholder='Search...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						onChange={handleSearch}
 						value={searchTerm}
 						ref={inputRef}						
 
@@ -417,14 +431,7 @@ try {
 										)}
 										{categories &&
 											dataPagination(categories, currentPage, perPage)
-												.filter((category: any) => category.status === true) 
-												.filter((category: any) =>
-													searchTerm
-														? category.name
-																.toLowerCase()
-																.includes(searchTerm.toLowerCase())
-														: true,
-												)
+												.filter((category: any) => category.status === true)
 												.map((category: any, index: any) => {
 													const disableButtons =
 														category.name === 'Touch Pad' ||

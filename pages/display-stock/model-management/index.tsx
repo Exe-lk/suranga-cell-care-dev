@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -42,13 +42,14 @@ interface Model {
 
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode(); // Dark mode
-	const [searchTerm, setSearchTerm] = useState(''); // State for search term
+	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false); // State for add modal status
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false); // State for edit modal status
 	const [id, setId] = useState<string>(''); // State for current category ID
 	const [status, setStatus] = useState(true); // State for managing data fetching status
-	const { data: models, error, isLoading, refetch } = useGetModelsQuery(undefined);
+	const { data: models, error, isLoading, refetch } = useGetModelsQuery(debouncedSearchTerm);
 	const { data: itemDiss } = useGetItemDissQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
@@ -338,6 +339,21 @@ const Index: NextPage = () => {
 		}
 	};
 
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Update the search input handler
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
+
 	useEffect(() => {
 		if (inputRef.current) {
 			inputRef.current.focus();
@@ -364,9 +380,7 @@ const Index: NextPage = () => {
 						type='search'
 						className='border-0 shadow-none bg-transparent'
 						placeholder='Search by model, category or brand...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						onChange={handleSearch}
 						value={searchTerm}
 						ref={inputRef}
 					/>
@@ -475,19 +489,6 @@ const Index: NextPage = () => {
 										{models &&
 											dataPagination(models, currentPage, perPage)
 												.filter((model: any) => model.status === true)
-												.filter((model: any) =>
-													searchTerm
-														? model.name
-																.toLowerCase()
-																.includes(searchTerm.toLowerCase()) ||
-														  model.category
-																.toLowerCase()
-																.includes(searchTerm.toLowerCase()) ||
-														  model.brand
-																.toLowerCase()
-																.includes(searchTerm.toLowerCase())
-														: true,
-												)
 												.filter((model: any) =>
 													selectedUsers.length > 0
 														? selectedUsers.includes(model.brand)

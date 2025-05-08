@@ -4,6 +4,7 @@ import {
   getCategory,
   updateCategory,
   deleteCategory,
+  searchCategories,
 } from '../../../service/categoryService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,7 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const categories = await getCategory();
+        const { search } = req.query;
+        let categories;
+        
+        if (search && typeof search === 'string') {
+          categories = await searchCategories(search);
+        } else {
+          categories = await getCategory();
+        }
+        
         res.status(200).json(categories);
         break;
       }

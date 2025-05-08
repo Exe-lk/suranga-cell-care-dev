@@ -8,7 +8,7 @@ export const brandApiSlice = createApi({
   tagTypes: ['Brand', 'Category'],
   endpoints: (builder) => ({
     getBrands: builder.query({
-      query: () => 'brand/route',
+      query: (searchTerm) => searchTerm ? `brand/route?search=${searchTerm}` : 'brand/route',
       providesTags: ['Brand'],
     }),
     getBrandById: builder.query({

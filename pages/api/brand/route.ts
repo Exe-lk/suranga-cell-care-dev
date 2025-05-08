@@ -4,6 +4,7 @@ import {
   getBrand,
   updateBrand,
   deleteBrand,
+  searchBrands,
 } from '../../../service/brandService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,7 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const brands = await getBrand();
+        const { search } = req.query;
+        let brands;
+        
+        if (search && typeof search === 'string') {
+          brands = await searchBrands(search);
+        } else {
+          brands = await getBrand();
+        }
+        
         res.status(200).json(brands);
         break;
       }

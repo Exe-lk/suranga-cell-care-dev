@@ -23,6 +23,7 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [addModel, { isLoading }] = useAddModelMutation();
 	const { refetch } = useGetModelsQuery(undefined);
 	const [filteredBrands, setFilteredBrands] = useState([]);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { data: brands, isLoading: brandsLoading, isError } = useGetBrandsQuery(undefined);
 	const {
 		data: categories,
@@ -63,6 +64,9 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			return errors;
 		},
 		onSubmit: async (values) => {
+			if (isSubmitting) return; // Prevent multiple submissions
+			setIsSubmitting(true); // Set submitting state to true
+			
 			const trimmedValues = {
 				...values,
 				category: values.category.trim(),  
@@ -86,6 +90,7 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 										title: 'Duplicate Model',
 										text: 'A model with this name already exists.',
 									});
+									setIsSubmitting(false); // Reset submitting state
 									return;
 								}
 
@@ -121,6 +126,8 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				console.error('Error during handleUpload: ', error);
 				Swal.close;
 				alert('An error occurred during file upload. Please try again later.');
+			} finally {
+				setIsSubmitting(false); // Reset submitting state
 			}
 		},
 	});
@@ -220,8 +227,11 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit}>
-				Create Model
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit} 
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Model'}
 				</Button>
 			</ModalFooter>
 		</Modal>

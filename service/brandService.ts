@@ -140,3 +140,14 @@ export const deleteBrand = async (id: string) => {
 
   if (error) throw error;
 };
+
+export const searchBrands = async (searchTerm: string) => {
+  const { data, error } = await supabase
+    .from('BrandDisplay')
+    .select('*')
+    .eq('status', true)
+    .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`);
+
+  if (error) throw error;
+  return data;
+};

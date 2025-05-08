@@ -6,7 +6,7 @@ export const modelApiSlice = createApi({
   tagTypes: ['Model', 'Category', 'Brand'],
   endpoints: (builder) => ({
     getModels: builder.query({
-      query: () => 'model/route',
+      query: (searchTerm) => searchTerm ? `model/route?search=${searchTerm}` : 'model/route',
       providesTags: ['Model'],
     }),
     getModelById: builder.query({

@@ -6,7 +6,7 @@ export const ItemDisApiSlice = createApi({
   tagTypes: ['ItemDis'],
   endpoints: (builder) => ({
     getItemDiss: builder.query({
-      query: () => 'ItemDis/route',
+      query: (searchTerm) => searchTerm ? `ItemDis/route?search=${searchTerm}` : 'ItemDis/route',
       providesTags: ['ItemDis'],
     }),
     getItemDiss1: builder.query({

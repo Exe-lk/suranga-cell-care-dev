@@ -6,7 +6,7 @@ export const technicianApiSlice = createApi({
   tagTypes: ['Technician'],
   endpoints: (builder) => ({
     getTechnicians: builder.query({
-      query: () => 'technicianManagement/route',
+      query: (searchTerm) => searchTerm ? `technicianManagement/route?search=${searchTerm}` : 'technicianManagement/route',
       providesTags: ['Technician'],
     }),
     getTechnicianById: builder.query({

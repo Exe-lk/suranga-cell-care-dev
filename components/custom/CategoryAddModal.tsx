@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../bootstrap/Modal';
@@ -19,6 +19,7 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 	const [addCategory, { isLoading }] = useAddCategoryMutation();
 	const { refetch } = useGetCategoriesQuery(undefined);
 	const { data: categoryData } = useGetCategoriesQuery(undefined);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const formik = useFormik({
 		initialValues: {
@@ -37,6 +38,9 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 			return errors;
 		},
 		onSubmit: async (values) => {
+			if (isSubmitting) return;
+			setIsSubmitting(true);
+			
 			try {
 				// await refetch();
 				setIsOpen(false);
@@ -51,6 +55,7 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 						title: 'Duplicate Category',
 						text: 'A category with this name already exists.',
 					});
+					setIsSubmitting(false);
 					return;
 				}
 				const process = Swal.fire({
@@ -81,6 +86,8 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 				console.error('Error during handleUpload: ', error);
 				Swal.close;
 				alert('An error occurred during file upload. Please try again later.');
+			} finally {
+				setIsSubmitting(false);
 			}
 		},
 	});
@@ -111,8 +118,11 @@ const CategoryAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen })
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit}>
-				Create Category
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit}
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Category'}
 				</Button>
 			</ModalFooter>
 		</Modal>

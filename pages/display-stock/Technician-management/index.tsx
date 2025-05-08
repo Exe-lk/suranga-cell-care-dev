@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import useDarkMode from '../../../hooks/useDarkMode';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
@@ -40,11 +40,12 @@ import PaginationButtons, {
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [id, setId] = useState<string>('');
-	const { data: technicians, error, isLoading } = useGetTechniciansQuery(undefined);
+	const { data: technicians, error, isLoading } = useGetTechniciansQuery(debouncedSearchTerm);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
 	const [updateTechnician] = useUpdateTechnicianMutation();
@@ -311,6 +312,23 @@ const Index: NextPage = () => {
 		}
 	}, [technicians]);
 
+	// Debounce search term to minimize API calls
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+			// This will trigger a new API call with the updated search term
+			// Search is performed directly on the database rather than client-side filtering
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Handle search input changes
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -324,10 +342,8 @@ const Index: NextPage = () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search by name or technician number...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						placeholder='Search by name, ID, type or mobile number...'
+						onChange={handleSearch}
 						value={searchTerm}
 						ref={inputRef}
 					/>
