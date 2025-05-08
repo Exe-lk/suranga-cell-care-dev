@@ -27,7 +27,7 @@ const Index: NextPage = () => {
 	const today = new Date();
 	const [startDate, setStartDate] = useState<string>(today.toISOString().split('T')[0]);
 	// Use our new query to get ALL records without date filtering
-	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery();
+	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
 

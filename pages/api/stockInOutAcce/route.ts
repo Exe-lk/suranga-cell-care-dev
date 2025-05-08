@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return;
         }
         try {
-          await updatestockIn(id, quantity, type);
+          await updatestockIn(id, quantity);
           res.status(200).json({ message: 'Stock updated successfully' });
         } catch (error:any) {
           console.error('Error updating stock:', error);

@@ -63,7 +63,7 @@ export const getstockInById = async (id: string) => {
 };
 
 // Update Quantity in ItemManagementAcce Table
-export const updatestockIn = async (id: string, quantity: string, type: string) => {
+export const updatestockIn = async (id: string, quantity: string) => {
   try {
     // First get the current item to ensure it exists
     const { data: item, error: getError } = await supabase
