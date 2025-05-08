@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const stockInOutAcceApiSlice = createApi({
   reducerPath: 'stockInOutAcceApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'  }),
+  baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL }),
   tagTypes: ['StockInOutAcce'],
   endpoints: (builder) => ({
     getStockInOuts: builder.query({
@@ -11,6 +11,10 @@ export const stockInOutAcceApiSlice = createApi({
     }),
     getStockInOutById: builder.query({
       query: (id) => `stockInOutAcce/${id}`,
+      providesTags: ['StockInOutAcce'],
+    }),
+    getAllStockRecords: builder.query({
+      query: () => `stockInOutAcce/route1`, // No parameters to get everything
       providesTags: ['StockInOutAcce'],
     }),
     getStockInOutByDate: builder.query({
@@ -57,6 +61,7 @@ export const stockInOutAcceApiSlice = createApi({
 export const {
   useGetStockInOutsQuery,
   useGetStockInOutByIdQuery,
+  useGetAllStockRecordsQuery,
   useGetStockInOutByDateQuery,  // Now accepts date from frontend
   useGetDeleteStockInOutsQuery,
   useAddStockInMutation,

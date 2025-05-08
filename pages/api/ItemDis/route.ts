@@ -4,6 +4,7 @@ import {
   getItemDiss,
   updateItemDis,
   deleteItemDis,
+  searchItemDiss,
 } from '../../../service/itemManagementDisService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,8 +21,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const ItemDiss = await getItemDiss();
-        res.status(200).json(ItemDiss);
+        const { search } = req.query;
+        let itemDiss;
+        
+        if (search && typeof search === 'string') {
+          itemDiss = await searchItemDiss(search);
+        } else {
+          itemDiss = await getItemDiss();
+        }
+        
+        res.status(200).json(itemDiss);
         break;
       }
       case 'PUT': {

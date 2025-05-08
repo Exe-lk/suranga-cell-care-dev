@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const billApiSlice = createApi({
 	reducerPath: 'billApi',
-baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/' }),
+	baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL }),
 tagTypes: ['Bill'],
 	endpoints: (builder) => ({
 		getBills: builder.query({

@@ -136,165 +136,182 @@
 // 	await deleteDoc(ModelRef);
 // };
 import { supabase } from '../lib/supabase';
+
 export const createModel = async (
 	name: string,
 	description: string,
 	brand: string,
 	category: string
-  ) => {
+) => {
+	console.log("Creating model with:", { name, description, brand, category });
 	const status = true;
-	const timestamp = new Date(); // equivalent to Firestore's Timestamp.now()
-  
-	const { data, error } = await supabase
-	  .from('ModelAccessory')
-	  .insert([{ name, description, brand, category, status, timestamp }]);
-  
-	if (error) {
-	  console.error('Error creating model:', error);
-	  throw error;
+	const created_at = new Date();
+
+	try {
+		const { data, error } = await supabase
+			.from('ModelAccessory')
+			.insert([{ name, description, brand, category, status, created_at }])
+			.select('id, name, description, brand, category, status, created_at');
+
+		if (error) {
+			console.error('Error creating model:', error);
+			throw error;
+		}
+
+		if (!data || data.length === 0) {
+			console.error('No data returned after creating model');
+			throw new Error('Failed to create model - no data returned');
+		}
+
+		console.log('Model created successfully:', data[0]);
+		return data[0].id;
+	} catch (error) {
+		console.error('Error in createModel function:', error);
+		throw error;
 	}
-  
-	return data?.[0];
-  };
-  export const getModel = async () => {
+};
+
+export const getModel = async () => {
 	const { data, error } = await supabase
-	  .from('ModelAccessory')
-	  .select('*')
-	  .eq('status', true);
-  
+		.from('ModelAccessory')
+		.select('*')
+		.eq('status', true);
+
 	if (error) {
-	  console.error('Error fetching models:', error);
-	  return [];
+		console.error('Error fetching models:', error);
+		return [];
 	}
-	console.log("Error:", error)
-	
-  
+	console.log("Error:", error);
 	return data;
-	console.log("Model:", data)
-  };
-  export const getDeleteModel = async () => {
+};
+
+export const getDeleteModel = async () => {
 	const { data, error } = await supabase
-	  .from('ModelAccessory')
-	  .select('*')
-	  .eq('status', false);
-  
+		.from('ModelAccessory')
+		.select('*')
+		.eq('status', false);
+
 	if (error) {
-	  console.error('Error fetching deleted models:', error);
-	  return [];
+		console.error('Error fetching deleted models:', error);
+		return [];
 	}
-  
+
 	return data;
-  };
-  export const getModelById = async (id: string) => {
+};
+
+export const getModelById = async (id: string) => {
 	const { data, error } = await supabase
-	  .from('ModelAccessory')
-	  .select('*')
-	  .eq('id', id)
-	  .single();
-  
+		.from('ModelAccessory')
+		.select('*')
+		.eq('id', id)
+		.single();
+
 	if (error) {
-	  console.error('Error getting model by ID:', error);
-	  return null;
+		console.error('Error getting model by ID:', error);
+		return null;
 	}
-  
+
 	return data;
-  };
-  export const updateModel1 = async (
+};
+
+export const updateModel1 = async (
 	id: string,
 	name: string,
 	description: string,
 	brand: string,
 	category: string,
 	status: boolean
-  ) => {
+) => {
 	const { error } = await supabase
-	  .from('ModelAccessory')
-	  .update({ name, description, brand, category, status })
-	  .eq('id', id);
-  
+		.from('ModelAccessory')
+		.update({ name, description, brand, category, status })
+		.eq('id', id);
+
 	if (error) {
-	  console.error('Error updating model:', error);
+		console.error('Error updating model:', error);
 	}
-  };
-  export const updateModel = async (
+};
+
+export const updateModel = async (
 	id: string,
 	name: string,
 	description: string,
 	brand: string,
 	category: string,
 	status: boolean
-  ) => {
+) => {
 	const { data: modelData, error: modelError } = await supabase
-	  .from('ModelAccessory')
-	  .select('*')
-	  .eq('id', id)
-	  .single();
-  
+		.from('ModelAccessory')
+		.select('*')
+		.eq('id', id)
+		.single();
+
 	if (modelError || !modelData) {
-	  console.error(`Model with ID "${id}" not found.`, modelError);
-	  return;
+		console.error(`Model with ID "${id}" not found.`, modelError);
+		return;
 	}
-  
+
 	const oldBrand = modelData.brand;
 	const oldCategory = modelData.category;
 	const oldModel = modelData.name;
-  
+
 	// Update model
 	await supabase
-	  .from('ModelAccessory')
-	  .update({ name, description, brand, category, status })
-	  .eq('id', id);
-  
+		.from('ModelAccessory')
+		.update({ name, description, brand, category, status })
+		.eq('id', id);
+
 	// Update related items in ItemManagementAcce
 	const { data: itemData, error: itemError } = await supabase
-	  .from('ItemManagementAcce')
-	  .select('id')
-	  .eq('brand', oldBrand)
-	  .eq('category', oldCategory)
-	  .eq('model', oldModel);
-  
-	if (itemError) {
-	  console.error('Error fetching related items:', itemError);
-	}
-  
-	const itemUpdates = itemData?.map((item) =>
-	  supabase
 		.from('ItemManagementAcce')
-		.update({ brand, category, model: name })
-		.eq('id', item.id)
+		.select('id')
+		.eq('brand', oldBrand)
+		.eq('category', oldCategory)
+		.eq('model', oldModel);
+
+	if (itemError) {
+		console.error('Error fetching related items:', itemError);
+	}
+
+	const itemUpdates = itemData?.map((item) =>
+		supabase
+			.from('ItemManagementAcce')
+			.update({ brand, category, model: name })
+			.eq('id', item.id)
 	);
-  
+
 	if (itemUpdates) await Promise.all(itemUpdates);
-  
+
 	// Update related items in StockAcce
 	const { data: stockData, error: stockError } = await supabase
-	  .from('StockAcce')
-	  .select('id')
-	  .eq('brand', oldBrand)
-	  .eq('category', oldCategory)
-	  .eq('model', oldModel);
-  
-	if (stockError) {
-	  console.error('Error fetching related stock items:', stockError);
-	}
-  
-	const stockUpdates = stockData?.map((stock) =>
-	  supabase
 		.from('StockAcce')
-		.update({ brand, category, model: name })
-		.eq('id', stock.id)
-	);
-  
-	if (stockUpdates) await Promise.all(stockUpdates);
-  };
-  export const deleteModel = async (id: string) => {
-	const { error } = await supabase
-	  .from('ModelAccessory')
-	  .delete()
-	  .eq('id', id);
-  
-	if (error) {
-	  console.error('Error deleting model:', error);
+		.select('id')
+		.eq('brand', oldBrand)
+		.eq('category', oldCategory)
+		.eq('model', oldModel);
+
+	if (stockError) {
+		console.error('Error fetching related stock items:', stockError);
 	}
-  };
+
+	const stockUpdates = stockData?.map((stock) =>
+		supabase
+			.from('StockAcce')
+			.update({ brand, category, model: name })
+			.eq('id', stock.id)
+	);
+
+	if (stockUpdates) await Promise.all(stockUpdates);
+};
+
+export const deleteModel = async (id: string) => {
+	const { error } = await supabase
+		.from('ModelAccessory')
+		.delete()
+		.eq('id', id);
+
+	if (error) {
+		console.error('Error deleting model:', error);
+	}
+};
   

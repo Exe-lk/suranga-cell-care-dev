@@ -115,3 +115,18 @@ export const deleteItemDis = async (id: string) => {
     console.error('Error deleting item:', error);
   }
 };
+
+export const searchItemDiss = async (searchTerm: string) => {
+  const { data, error } = await supabase
+    .from('ItemManagementDis')
+    .select('*')
+    .eq('status', true)
+    .or(`model.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,boxNumber.ilike.%${searchTerm}%`);
+
+  if (error) {
+    console.error('Error searching items:', error);
+    return [];
+  }
+
+  return data;
+};

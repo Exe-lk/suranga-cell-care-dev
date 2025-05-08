@@ -43,7 +43,7 @@ interface StockOut {
 	category: string;
 	quantity: string;
 	date: string;
-	customerName: string;
+	name: string;
 	mobile: string;
 	nic: string;
 	email: string;
@@ -63,7 +63,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		category: '',
 		quantity: '',
 		date: '',
-		customerName: '',
+		name: '',
 		mobile: '',
 		nic: '',
 		email: '',
@@ -112,7 +112,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			category: stockOut.category,
 			quantity: '',
 			date: '',
-			customerName: '',
+			name: '',
 			mobile: '',
 			nic: '',
 			email: '',
@@ -162,6 +162,8 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					showConfirmButton: false,
 				});
 				await refetch();
+				
+				// Validate and convert numeric values
 				const stockOutQuantity = values.quantity ? parseInt(values.quantity) : 0;
 				if (isNaN(stockInQuantity) || isNaN(stockOutQuantity)) {
 					Swal.fire({
@@ -171,6 +173,17 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					});
 					return;
 				}
+				
+				// Ensure sellingPrice is a number
+				if (values.sellingPrice === '' || isNaN(Number(values.sellingPrice))) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Invalid Selling Price',
+						text: 'Selling Price must be a valid number.',
+					});
+					return;
+				}
+				
 				const updatedQuantity = stockInQuantity - stockOutQuantity;
 				if (updatedQuantity < 0) {
 					Swal.fire({
@@ -180,13 +193,27 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					});
 					return;
 				}
-				const response = await addstockOut(values).unwrap();
+				
+				// Clone values and ensure numeric fields are properly formatted
+				const processedValues:any = {...values};
+				processedValues.quantity = stockOutQuantity;
+				processedValues.sellingPrice = Number(values.sellingPrice);
+				if (values.cost) processedValues.cost = Number(values.cost);
+				
+				// Make sure stock is set to 'stockOut' explicitly - VERY IMPORTANT
+				processedValues.stock = 'stockOut';
+				
+				console.log("Submitting stock-out with explicit stock value:", processedValues.stock);
+				
+				const response = await addstockOut(processedValues).unwrap();
+				console.log("Stock-out created response:", response);
 				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
 				refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });
 				formik.resetForm();
 				setIsOpen(false);
 			} catch (error) {
+				console.error('Stock out error:', error);
 				await Swal.fire({
 					icon: 'error',
 					title: 'Error',

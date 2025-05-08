@@ -128,18 +128,29 @@ import { supabase } from '../lib/supabase';
 
 // Create a new brand
 export const createBrand = async (category: string, name: string) => {
-
-	console.log(category)
-	const { data, error } = await supabase
-		.from('BrandAccessory')
-		.insert([{category, name, status: true }])
-		.select() // If your table has an `id` column (e.g., serial primary key)
-		.single();
-
-	if (error) throw error;
+	console.log('Creating brand:', { category, name });
 	
-	return data.id;
+	try {
+		const { data, error } = await supabase
+			.from('BrandAccessory')
+			.insert([{category, name, status: true }])
+			.select();
 
+		if (error) {
+			console.error('Error creating brand in Supabase:', error);
+			throw error;
+		}
+		
+		if (!data || data.length === 0) {
+			throw new Error('No data returned from database after brand creation');
+		}
+		
+		console.log('Brand created successfully:', data[0]);
+		return data[0].id;
+	} catch (error) {
+		console.error('Exception in createBrand:', error);
+		throw error;
+	}
 };
 
 // Get active brands
@@ -151,6 +162,7 @@ export const getBrand = async () => {
 
 	if (error) throw error;
 	return data;
+	
 };
 
 // Get deleted brands

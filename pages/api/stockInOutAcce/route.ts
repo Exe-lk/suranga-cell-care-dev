@@ -25,13 +25,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'PUT': {
-        const { id, quantity } = req.body;
+        const { id, quantity, type } = req.body;
         if (!id || !quantity) {
-          res.status(400).json({ error: 'stock In ID and name are required' });
+          res.status(400).json({ error: 'ID and quantity are required' });
           return;
         }
-        await updatestockIn(id, quantity);
-        res.status(200).json({ message: 'stock In updated' });
+        try {
+          await updatestockIn(id, quantity);
+          res.status(200).json({ message: 'Stock updated successfully' });
+        } catch (error:any) {
+          console.error('Error updating stock:', error);
+          res.status(500).json({ 
+            error: 'Failed to update stock quantity',
+            details: error.message || error 
+          });
+        }
         break;
       }
       default: {

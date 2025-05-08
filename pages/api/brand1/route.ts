@@ -11,6 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (req.method) {
       case 'POST': {
         const { category, name } = req.body;
+        console.log('API received brand creation request:', { category, name });
+        
         if (!name) {
           res.status(400).json({ error: 'Name is required' });
           return;
@@ -22,9 +24,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         try {
           const id = await createBrand(category, name);
+          console.log('Brand created successfully with ID:', id);
           res.status(201).json({ message: 'Brand created', id });
         } catch (error:any) {
           console.error("Error creating brand:", error);
+          
+          // Check for specific error types
+          if (error.code === '23505') {
+            // Unique constraint violation
+            return res.status(409).json({
+              error: 'Brand already exists',
+              details: 'A brand with this name already exists in this category.'
+            });
+          }
+          
           res.status(500).json({ 
             error: 'Failed to create brand',
             details: error.message || 'Unknown error' 

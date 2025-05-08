@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../bootstrap/Modal';
@@ -19,7 +19,8 @@ interface BrandAddModalProps {
 
 const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [addBrand, { isLoading }] = useAddBrand1Mutation();
-	const { data: BrandData,refetch } = useGetBrands1Query(undefined);
+	const { data: BrandData, refetch } = useGetBrands1Query(undefined);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const {
 		data: categories,
 		isLoading: categoriesLoading,
@@ -51,6 +52,9 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			return errors;
 		},
 		onSubmit: async (values) => {
+			if (isSubmitting) return; // Prevent multiple submissions
+			setIsSubmitting(true); // Set submitting state to true
+			
 			try {
 				await refetch();
 		
@@ -63,6 +67,7 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						title: 'Validation Error',
 						text: 'Both brand name and category are required.',
 					});
+					setIsSubmitting(false); // Reset submitting state
 					return;
 				}
 				
@@ -78,6 +83,7 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						title: 'Duplicate Brand',
 						text: 'A Brand with this name already exists.',
 					});
+					setIsSubmitting(false); // Reset submitting state
 					return;
 				}
 
@@ -96,16 +102,18 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						status: true
 					}).unwrap();
 					
-					await processingSwal;
-					refetch();
+					Swal.close();
+					
 					await Swal.fire({
 						icon: 'success',
 						title: 'Brand Created Successfully',
 					});
 					formik.resetForm();
 					setIsOpen(false);
+					refetch();
 				} catch (error:any) {
-					await processingSwal;
+					Swal.close();
+					
 					console.error('Error during brand creation: ', error);
 					await Swal.fire({
 						icon: 'error',
@@ -114,13 +122,16 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					});
 				}
 			} catch (error) {
-				console.error('Error during form submission: ', error);
 				Swal.close();
-				Swal.fire({
+				
+				console.error('Error during form submission: ', error);
+				await Swal.fire({
 					icon: 'error',
 					title: 'Error',
 					text: 'An unexpected error occurred. Please try again later.',
 				});
+			} finally {
+				setIsSubmitting(false); // Reset submitting state in all cases
 			}
 		},
 	});
@@ -181,8 +192,11 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit} isDisable={isLoading}>
-					{isLoading ? 'Saving...' : 'Create Brand'}
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit} 
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Brand'}
 				</Button>
 			</ModalFooter>
 		</Modal>

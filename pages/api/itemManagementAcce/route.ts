@@ -15,8 +15,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           res.status(400).json({ error: 'Item Acce model is required' });
           return;
         }
-        const id = await createItemAcce(req.body);
-        res.status(201).json({ message: 'Item Acce created', id });
+        try {
+          const id = await createItemAcce(req.body);
+          res.status(201).json({ message: 'Item Acce created', id });
+        } catch (error: any) {
+          console.error('Error creating item:', error);
+          res.status(500).json({ 
+            error: 'Failed to create item',
+            details: error.message || error 
+          });
+        }
         break;
       }
       case 'GET': {

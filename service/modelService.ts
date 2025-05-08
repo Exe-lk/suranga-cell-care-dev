@@ -235,3 +235,14 @@ export const deleteModel = async (id: string) => {
 
   if (error) throw error;
 };
+
+export const searchModels = async (searchTerm: string) => {
+  const { data, error } = await supabase
+    .from('ModelDisplay')
+    .select('*')
+    .eq('status', true)
+    .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%`);
+
+  if (error) throw error;
+  return data;
+};

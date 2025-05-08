@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import Select from '../bootstrap/forms/Select';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
@@ -19,6 +19,7 @@ interface BrandAddModalProps {
 const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [addBrand, { isLoading }] = useAddBrandMutation();
 	const { refetch } = useGetCategoriesQuery(undefined);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const {
 		data: categories,
 		isLoading: categoriesLoading,
@@ -51,6 +52,9 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			return errors;
 		},
 		onSubmit: async (values) => {
+			if (isSubmitting) return;
+			setIsSubmitting(true);
+			
 			try {
 				await refetch();
 						
@@ -69,6 +73,7 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 										title: 'Duplicate Brand',
 										text: 'A Brand with this name already exists.',
 									});
+									setIsSubmitting(false);
 									return;
 								}
 				const process = Swal.fire({
@@ -101,6 +106,8 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				console.error('Error during handleUpload: ', error);
 				Swal.close;
 				alert('An error occurred during file upload. Please try again later.');
+			} finally {
+				setIsSubmitting(false);
 			}
 		},
 	});
@@ -161,8 +168,11 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit} isDisable={isLoading}>
-					{isLoading ? 'Saving...' : 'Create Brand'}
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit} 
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Brand'}
 				</Button>
 			</ModalFooter>
 		</Modal>

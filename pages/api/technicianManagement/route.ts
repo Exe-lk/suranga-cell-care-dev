@@ -4,6 +4,7 @@ import {
   getTechnicians,
   updateTechnician,
   deleteTechnician,
+  searchTechnicians,
 } from '../../../service/technicianManagementService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,7 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const technicians = await getTechnicians();
+        const { search } = req.query;
+        let technicians;
+        
+        if (search && typeof search === 'string') {
+          technicians = await searchTechnicians(search);
+        } else {
+          technicians = await getTechnicians();
+        }
+        
         res.status(200).json(technicians);
         break;
       }

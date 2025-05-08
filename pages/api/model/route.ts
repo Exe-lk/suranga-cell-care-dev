@@ -4,6 +4,7 @@ import {
   getModel,
   updateModel,
   deleteModel,
+  searchModels,
 } from '../../../service/modelService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,7 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const models = await getModel();
+        const { search } = req.query;
+        let models;
+        
+        if (search && typeof search === 'string') {
+          models = await searchModels(search);
+        } else {
+          models = await getModel();
+        }
+        
         res.status(200).json(models);
         break;
       }

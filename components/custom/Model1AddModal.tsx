@@ -20,8 +20,9 @@ interface ModelAddModalProps {
 
 const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [addModel, { isLoading }] = useAddModel1Mutation();
-	const { data: ModelData,refetch } = useGetModels1Query(undefined);
+	const { data: ModelData, refetch } = useGetModels1Query(undefined);
 	const [filteredBrands, setFilteredBrands] = useState([]);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { data: brands, isLoading: brandsLoading, isError } = useGetBrands1Query(undefined);
 	const {
 		data: categories,
@@ -65,6 +66,9 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 		},
 		
 		onSubmit: async (values) => {
+			if (isSubmitting) return; // Prevent multiple submissions
+			setIsSubmitting(true); // Set submitting state to true
+			
 			const trimmedValues = {
 				...values,
 				category: values.category.trim(),  
@@ -73,7 +77,7 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			};
 			try {
 				await refetch();
-		
+
 				const existingModel = ModelData?.find(
 					(brand: { name: string; category: string; brand: string }) =>
 						brand.name.toLowerCase() === trimmedValues.name.toLowerCase() &&
@@ -81,47 +85,77 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						brand.brand.toLowerCase() === trimmedValues.brand.toLowerCase()
 				);
 				
-		
 				if (existingModel) {
 					await Swal.fire({
 						icon: 'error',
 						title: 'Duplicate Model',
 						text: 'A model with this name already exists.',
 					});
+					setIsSubmitting(false); // Reset submitting state
 					return;
 				}
-				const process = Swal.fire({
+				
+				// Store the Swal instance
+				const loadingSwal = Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
 					allowOutsideClick: false,
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
+				
 				try {
-					const response: any = await addModel({
-						...values,
-						brand: values.brand,
-						category: values.category,
+					console.log("Submitting model creation request:", trimmedValues);
+					const response = await addModel({
+						name: trimmedValues.name,
+						description: trimmedValues.description || "",
+						brand: trimmedValues.brand,
+						category: trimmedValues.category,
 					}).unwrap();
-					refetch();
+					
+					// Success case
+					Swal.close();
+					console.log("Model created successfully:", response);
 					await Swal.fire({
 						icon: 'success',
 						title: 'Model Created Successfully',
 					});
+					
 					formik.resetForm();
 					setIsOpen(false);
-				} catch (error) {
-					console.error('Error during handleSubmit: ', error);
+					await refetch();
+				} catch (error: any) {
+					// Make sure loading modal is closed
+					Swal.close();
+					
+					console.error('Error creating model:', error);
+					let errorMessage = 'Failed to add the model. Please try again.';
+					
+					// Check if we have more specific error information
+					if (error?.data?.details) {
+						errorMessage = error.data.details;
+					} else if (error?.data?.error) {
+						errorMessage = error.data.error;
+					}
+					
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to add the model. Please try again.',
+						text: errorMessage,
 					});
 				}
-			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				Swal.close;
-				alert('An error occurred during file upload. Please try again later.');
+			} catch (error: any) {
+				// Ensure loading modal is closed for any outer errors
+				Swal.close();
+				
+				console.error('Error during form processing:', error);
+				await Swal.fire({
+					icon: 'error',
+					title: 'Error',
+					text: 'An unexpected error occurred. Please try again later.',
+				});
+			} finally {
+				setIsSubmitting(false); // Reset submitting state in all cases
 			}
 		},
 	});
@@ -233,8 +267,11 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit}>
-				Create Model
+				<Button 
+					color='success' 
+					onClick={formik.handleSubmit}
+					isDisable={isSubmitting || formik.isSubmitting || isLoading}>
+					{isSubmitting ? 'Creating...' : 'Create Model'}
 				</Button>
 			</ModalFooter>
 		</Modal>

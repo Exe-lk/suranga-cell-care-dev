@@ -2,11 +2,11 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const category1ApiSlice = createApi({
   reducerPath: 'category1Api',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'   }),
+  baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL }),
   tagTypes: ['Category1'],
   endpoints: (builder) => ({
     getCategories1: builder.query({
-      query: () => 'category1/route',
+      query: (searchTerm) => searchTerm ? `category1/route?search=${searchTerm}` : 'category1/route',
       providesTags: ['Category1'],
     }),
     getCategory1ById: builder.query({

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { NextPage } from 'next';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -40,13 +40,14 @@ interface Category {
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
 	const [category, setcategory] = useState<Category[]>([]);
 	const [id, setId] = useState<string>('');
 	const [status, setStatus] = useState(true);
-	const { data: brands, error, isLoading, refetch } = useGetBrandsQuery(undefined);
+	const { data: brands, error, isLoading, refetch } = useGetBrandsQuery(debouncedSearchTerm);
 	const { data: models } = useGetModelsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
@@ -64,6 +65,21 @@ const Index: NextPage = () => {
 		// Refetch brands data to ensure we have the latest data after category updates
 		refetch();
 	}, [refetch]);
+
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Update the search input handler
+	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const value = event.target.value;
+		setSearchTerm(value);
+	};
 
 	const handleClickDelete = async (brand: any) => {
 		const isCategoryLinked = models.some((model:any) => model.brand === brand.name);
@@ -349,9 +365,7 @@ const Index: NextPage = () => {
 						type='search'
 						className='border-0 shadow-none bg-transparent'
 						placeholder='Search...'
-						onChange={(event: any) => {
-							setSearchTerm(event.target.value);
-						}}
+						onChange={handleSearch}
 						value={searchTerm}
 						ref={inputRef}
 					/>
@@ -419,13 +433,6 @@ const Index: NextPage = () => {
 										{brands &&
 											dataPagination(brands, currentPage, perPage)
 												.filter((brand: any) => brand.status === true)
-												.filter((brand: any) =>
-													searchTerm
-														? brand.name
-																.toLowerCase()
-																.includes(searchTerm.toLowerCase())
-														: true,
-												)
 												.map((brand: any, index: any) => (
 													<tr key={index}>
 														<td>{brand.category}</td>

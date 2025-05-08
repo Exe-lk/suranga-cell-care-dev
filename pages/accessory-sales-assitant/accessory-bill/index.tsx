@@ -102,17 +102,41 @@ function index() {
 			value = value.substring(1);
 		}
 		setContact(value);
-		if (value.length === 9) {
-			const matchingCustomer = customer.find((customer) => customer.contact === value);
+		
+		// Check for matches even if the number isn't complete
+		if (value.length > 0) {
+			// Find any customer whose contact number ends with the entered digits
+			const matchingCustomer = customer.find((customer) => 
+				customer.contact && customer.contact.endsWith(value)
+			);
 
 			if (matchingCustomer) {
-				const { customer: customerId, contact, name } = matchingCustomer; // Extract specific fields
-				setName(name);
+				// If found, set the name and status
+				setName(matchingCustomer.name);
 				setStaus(true);
+				// If needed, also set the full contact number
+				if (matchingCustomer.contact && matchingCustomer.contact !== value) {
+					setContact(matchingCustomer.contact);
+				}
 			} else {
-				console.log('No matching customer found for the contact:', value);
-				setStaus(false);
+				// Only clear the name if there's no match and no existing name
+				// or if the contact field is completely different from any stored contact
+				const anyMatch = customer.some(c => 
+					c.contact && (c.contact.includes(value) || value.includes(c.contact))
+				);
+				
+				if (!anyMatch) {
+					setStaus(false);
+					// Only clear name if we're sure there's no match
+					if (value.length >= 3) {
+						setName('');
+					}
+				}
 			}
+		} else {
+			// Clear name when contact is empty
+			setName('');
+			setStaus(false);
 		}
 	};
 	// useEffect(() => {
@@ -366,23 +390,37 @@ function index() {
 					(accessItem: any) => accessItem.code === selectedProduct.substring(0, 4),
 				);
 
+				// Check if there's enough stock available
+				if (!matchingItem || matchingItem.quantity < quantity) {
+					Swal.fire('Error', 'Insufficient stock available for this item.', 'error');
+					return;
+				}
+
 				const existingItemIndex = orderedItems.findIndex(
 					(item) => item.barcode === selectedProduct,
 				);
-				let updatedItems;
+				
+				// For existing items, check total quantity against available stock
 				if (existingItemIndex !== -1) {
-					updatedItems = [...orderedItems];
+					const totalQuantity = Number(quantity);
+					if (matchingItem.quantity < totalQuantity) {
+						Swal.fire('Error', 'Insufficient stock available for this item.', 'error');
+						return;
+					}
+					
+					let updatedItems = [...orderedItems];
 					updatedItems[existingItemIndex] = {
 						...selectedItem,
 						quantity: Number(quantity),
 					};
+					setOrderedItems(updatedItems);
 				} else {
-					updatedItems = [
+					const updatedItems = [
 						...orderedItems,
 						{ ...selectedItem, quantity, warranty: matchingItem?.warranty },
 					];
+					setOrderedItems(updatedItems);
 				}
-				setOrderedItems(updatedItems);
 			}
 			setSelectedProduct('');
 			setQuantity(1);
@@ -422,6 +460,39 @@ function index() {
 	const addbill = async () => {
 		if (orderedItems.length > 0) {
 			try {
+				// Check if all items have sufficient stock before proceeding
+				const insufficientItems = [];
+				
+				for (const item of orderedItems) {
+					const { barcode, quantity } = item;
+					const barcodePrefix = barcode.slice(0, 4);
+					
+					const matchingItem = itemAcces?.find(
+						(accessItem: any) => accessItem.code === barcodePrefix
+					);
+					
+					if (!matchingItem || matchingItem.quantity < quantity) {
+						insufficientItems.push({
+							name: `${item.category} ${item.model} ${item.brand}`,
+							requested: quantity,
+							available: matchingItem?.quantity || 0,
+						});
+					}
+				}
+				
+				if (insufficientItems.length > 0) {
+					const itemList = insufficientItems.map(item => 
+						`${item.name} (Requested: ${item.requested}, Available: ${item.available})`
+					).join('<br>');
+					
+					Swal.fire({
+						title: 'Insufficient Stock',
+						html: `Cannot proceed with billing. The following items don't have enough stock:<br><br>${itemList}`,
+						icon: 'error'
+					});
+					return;
+				}
+
 				const result = await Swal.fire({
 					title: 'Are you sure?',
 					text: 'You will not be able to recover this status!',

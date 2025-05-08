@@ -253,41 +253,51 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
-
-				const finalValues = {
-					...values,
-					quantity: values.type === 'Mobile' ? '1' : values.quantity,
-					cid: stockIn.id,
-				};
-
+				
+				let url = '';
+				if (imageurl) {
+					url = (await handleUploadimage()) as string;
+				}
+				
 				try {
-					// const imgurl: any = await handleUploadimage();
-					const updatedQuantity = parseInt(nowQuantity) + parseInt(finalValues.quantity);
+					// First, add the stock-in record
 					const response: any = await addstockIn({
-						...finalValues,
-						code: generatedCode,
+						...values,
 						barcode: generatedbarcode,
-						sellingPrice: Number(values.sellingPrice),
-						// NIC_Photo: imgurl,
+						NIC_Photo: url,
 					}).unwrap();
-					await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
+					
+					// Then update the item quantity
+					if (stockInData && stockInData.id) {
+						const currentQuantity = parseInt(stockInData.quantity || '0', 10);
+						const addedQuantity = parseInt(values.quantity || '0', 10);
+						const newQuantity = (currentQuantity + addedQuantity).toString();
+						
+						// Call the update API to update the item quantity
+						await updateStockInOut({
+							id: stockInData.id,
+							quantity: newQuantity,
+							type: stockInData.type
+						});
+					}
+					
 					refetch();
 					await Swal.fire({
 						icon: 'success',
-						title: 'Stock In Created Successfully',
+						title: 'Stock In Added Successfully',
 					});
 					formik.resetForm();
 					setIsOpen(false);
 				} catch (error) {
+					console.error('Error during stock in:', error);
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to add the item. Please try again.',
+						text: 'Failed to add stock in. Please try again.',
 					});
 				}
 			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				alert('An error occurred during the process. Please try again later.');
+				console.error('Error:', error);
 			}
 		},
 	});
@@ -470,18 +480,16 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					<FormGroup
 						id='quantity'
 						label='Quantity'
-						className={`col-md-6 ${formik.values.type === 'Mobile' ? 'd-none' : ''}`}>
+						className='col-md-6'>
 						<Input
 							type='number'
-							value={formik.values.type === 'Mobile' ? 1 : formik.values.quantity}
+							value={formik.values.quantity}
 							onChange={formik.handleChange}
 							onBlur={formik.handleBlur}
-							isValid={formik.isValid && formik.values.type !== 'Mobile'}
+							isValid={formik.isValid}
 							isTouched={formik.touched.quantity}
 							invalidFeedback={formik.errors.quantity}
 							validFeedback='Looks good!'
-							readOnly={formik.values.type === 'Mobile'}
-							className={formik.values.type === 'Mobile' ? 'd-none' : ''}
 							min={1}
 						/>
 					</FormGroup>
