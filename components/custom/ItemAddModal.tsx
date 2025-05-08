@@ -42,11 +42,11 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 		if (isOpen) {
 			if (itemAcces?.length) {
 				const lastCode = itemAcces
-					.map((item: { code: string }) => item.code)
-					.filter((code: string) => code)
+					.map((item: { code: string }) => item.code || '')
+					.filter((code: string) => code && typeof code === 'string')
 					.reduce((maxCode: string, currentCode: string) => {
-						const currentNumericPart = parseInt(currentCode.replace(/\D/g, ''), 10);
-						const maxNumericPart = parseInt(maxCode.replace(/\D/g, ''), 10);
+						const currentNumericPart = parseInt(currentCode.replace(/\D/g, ''), 10) || 0;
+						const maxNumericPart = parseInt(maxCode.replace(/\D/g, ''), 10) || 0;
 						return currentNumericPart > maxNumericPart ? currentCode : maxCode;
 					}, '1000');
 				const newCode = incrementCode(lastCode);
@@ -59,7 +59,8 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 
 	
 	const incrementCode = (code: string) => {
-		const numericPart = parseInt(code.replace(/\D/g, ''), 10);
+		if (!code) return '1000';
+		const numericPart = parseInt(code.replace(/\D/g, ''), 10) || 0;
 		const incrementedNumericPart = (numericPart + 1).toString().padStart(4, '0');
 		return incrementedNumericPart;
 	};

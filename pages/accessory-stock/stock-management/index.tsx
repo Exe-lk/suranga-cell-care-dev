@@ -14,7 +14,7 @@ import { toPng, toSvg } from 'html-to-image';
 import { DropdownItem } from '../../../components/bootstrap/Dropdown';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useGetStockInOutByDateQuery, useGetStockInOutsQuery } from '../../../redux/slices/stockInOutAcceApiSlice';
+import { useGetAllStockRecordsQuery } from '../../../redux/slices/stockInOutAcceApiSlice';
 import PaginationButtons, {
 	dataPagination,
 	PER_COUNT,
@@ -26,26 +26,46 @@ const Index: NextPage = () => {
 	const [selectedDate, setSelectedDate] = useState('');
 	const today = new Date();
 	const [startDate, setStartDate] = useState<string>(today.toISOString().split('T')[0]);
-	const { data: StockInOuts, error, isLoading } = useGetStockInOutByDateQuery(startDate);
+	// Use our new query to get ALL records without date filtering
+	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery();
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
+
+	// Initialize with both stock types selected
+	const stock = [{ stock: 'stockOut' }, { stock: 'stockIn' }];
+	// Show all stock types by default
+	const [selectedUsers, setSelectedUsers] = useState<string[]>(['stockIn', 'stockOut']);
+
+	// Debug stock types
+	useEffect(() => {
+		if (StockInOuts) {
+			console.log("Total stock records:", StockInOuts.length);
+			const stockTypes = StockInOuts.map((item: any) => item.stock).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
+			console.log("Stock types in data:", stockTypes);
+			const stockOutCount = StockInOuts.filter((item: any) => item.stock === 'stockOut').length;
+			console.log("Stock-out records count:", stockOutCount);
+		}
+	}, [StockInOuts]);
+
 	console.log(StockInOuts)
 	const [endDate, setEndDate] = useState<string>('');
-	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 	const inputRef = useRef<HTMLInputElement>(null);
-	const stock = [{ stock: 'stockOut' }, { stock: 'stockIn' }];
 
+	// Simplified filtering logic that applies date filtering in the frontend
 	const filteredTransactions = StockInOuts?.filter((trans: any) => {
-		const transactionDate = new Date(trans.date);
-		const start = startDate ? new Date(startDate) : null;
-		const end = endDate ? new Date(endDate) : null;
-		if (start && end) {
-			return transactionDate >= start && transactionDate <= end;
-		} else if (start) {
-			return transactionDate >= start;
-		} else if (end) {
-			return transactionDate <= end;
+		// Apply date filtering only if we have a valid date to filter by
+		if (startDate) {
+			const transactionDate = trans.date ? new Date(trans.date) : null;
+			const start = startDate ? new Date(startDate) : null;
+			
+			// Skip records without a date or with an invalid date
+			if (!transactionDate) return false;
+			
+			if (start) {
+				return transactionDate >= start;
+			}
 		}
+		// If no date filtering, include all records
 		return true;
 	});
 
@@ -371,9 +391,11 @@ const Index: NextPage = () => {
 												perPage,
 											)
 												.filter(
-													(StockInOut: any) => StockInOut.status === true,
+													(StockInOut: any) => {
+														console.log("Stock record status:", StockInOut.id, StockInOut.status);
+														return StockInOut.status === true;
+													},
 												)
-
 												.filter((brand: any) => {
 													const search = searchTerm.toLowerCase();
 													return (
@@ -383,22 +405,25 @@ const Index: NextPage = () => {
 														(brand.brand + ' ' + brand.model)?.toLowerCase().includes(search) ||
 														(brand.category+" "+brand.brand+" "+brand.model)?.toLowerCase().includes(search) ||
 														(brand.category+" "+brand.model+" "+brand.brand)?.toLowerCase().includes(search) ||
-														brand.category?.toLowerCase().includes(search)
+														brand.category?.toLowerCase().includes(search) ||
+														brand.stock?.toLowerCase().includes(search)
 													);
 												})
-												.filter((brand: any) =>
-													selectedUsers.length > 0
-														? selectedUsers.includes(brand.stock)
-														: true,
-												)
-												.sort((a: any, b: any) => b.code - a.code)
+												.filter((brand: any) => {
+													if (selectedUsers.length > 0) {
+														console.log("Filtering by stock type:", brand.id, brand.stock, "Included:", selectedUsers.includes(brand.stock));
+													}
+													return selectedUsers.length > 0 ? selectedUsers.includes(brand.stock) : true;
+												})
+												.sort((a: any, b: any) => {
+													const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+													const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+													return dateB - dateA;
+												})
 												.map((brand: any, index: any) => {
-													const formattedTimestamp = brand.timestamp
-														?.toDate
-														? brand.timestamp.toDate().toLocaleString() // Firestore Timestamp
-														: new Date(
-																brand.timestamp?.seconds * 1000,
-														  ).toLocaleString(); // Handle raw seconds & nanoseconds
+													const formattedTimestamp = brand.created_at 
+														? new Date(brand.created_at).toLocaleString() 
+														: 'No timestamp';
 
 													return (
 														<tr key={index}>

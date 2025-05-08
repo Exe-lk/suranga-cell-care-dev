@@ -96,16 +96,18 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						status: true
 					}).unwrap();
 					
-					await processingSwal;
-					refetch();
+					Swal.close();
+					
 					await Swal.fire({
 						icon: 'success',
 						title: 'Brand Created Successfully',
 					});
 					formik.resetForm();
 					setIsOpen(false);
+					refetch();
 				} catch (error:any) {
-					await processingSwal;
+					Swal.close();
+					
 					console.error('Error during brand creation: ', error);
 					await Swal.fire({
 						icon: 'error',
@@ -114,9 +116,10 @@ const BrandAddModal: FC<BrandAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					});
 				}
 			} catch (error) {
-				console.error('Error during form submission: ', error);
 				Swal.close();
-				Swal.fire({
+				
+				console.error('Error during form submission: ', error);
+				await Swal.fire({
 					icon: 'error',
 					title: 'Error',
 					text: 'An unexpected error occurred. Please try again later.',

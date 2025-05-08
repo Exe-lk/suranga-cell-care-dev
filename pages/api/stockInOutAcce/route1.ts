@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createstockOut, getstockInByDate } from '../../../service/stockInOutAcceService';
+import { createstockOut, getstockInByDate, getAllStockRecords } from '../../../service/stockInOutAcceService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 	try {
@@ -11,53 +11,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 					category,
 					quantity,
 					date,
-					customerName,
+					name,
 					mobile,
 					nic,
-					email,
 					barcode,
 					cost,
 					sellingPrice,
 					stock,
 					description,
 				} = req.body;
+				
 				if (!model) {
-					res.status(400).json({ error: 'stock In name is required' });
+					res.status(400).json({ error: 'Model is required' });
 					return;
 				}
-				const id = await createstockOut(
-					model,
-					brand,
-					category,
-					quantity,
-					date,
-					customerName,
-					mobile,
-					nic,
-					email,
-					barcode,
-					cost,
-					sellingPrice,
-					stock,
-					description,
-				);
-				res.status(201).json({ message: 'stock In created', id });
+				
+				try {
+					// Pass the entire req.body to createstockOut
+					const id = await createstockOut(req.body);
+					res.status(201).json({ message: 'Stock out created', id });
+				} catch (error: any) {
+					console.error('Error creating stock out:', error);
+					res.status(500).json({ 
+						error: 'Failed to create stock out',
+						details: error.message || error 
+					});
+				}
 				break;
 			}
 			case 'GET': {
-				const { date } = req.query;
-				console.log(date);
-				if (!date || typeof date !== 'string') {
-					res.status(400).json({ error: 'Valid date is required' });
-					return;
-				}
-
-				const stockData = await getstockInByDate(date);
+				// Get all stock records regardless of date
+				const stockData = await getAllStockRecords();
 				res.status(200).json(stockData);
 				break;
 			}
 			default: {
-				res.setHeader('Allow', ['POST']);
+				res.setHeader('Allow', ['POST', 'GET']);
 				res.status(405).end(`Method ${req.method} Not Allowed`);
 				break;
 			}

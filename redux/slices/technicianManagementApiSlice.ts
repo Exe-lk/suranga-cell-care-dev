@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const technicianApiSlice = createApi({
   reducerPath: 'technicianApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'https://surangacellcare-dev.netlify.app/api/'  }),
+  baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL }),
   tagTypes: ['Technician'],
   endpoints: (builder) => ({
     getTechnicians: builder.query({

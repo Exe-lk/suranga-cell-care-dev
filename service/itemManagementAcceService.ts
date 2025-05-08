@@ -41,16 +41,19 @@
 import { supabase } from '../lib/supabase';
 export const createItemAcce = async (values: any) => {
   values.status = true; // ensure status is set
+  values.created_at = new Date(); // add created_at timestamp
+  
   const { data, error } = await supabase
     .from('ItemManagementAcce')
-    .insert([values]);
-
+    .insert([values])
+    .select();
+  
   if (error) {
     console.error('Error creating item:', error);
-    return null;
+    throw error;
   }
-
-  return data?.[0];
+  
+  return data?.[0]?.id;
 };
 export const getItemAcces = async () => {
 

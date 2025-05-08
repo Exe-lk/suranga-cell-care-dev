@@ -11,18 +11,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (req.method) {
       case 'POST': {
         const { name, description, brand, category } = req.body;
-        if (!name) {
-          res.status(400).json({ error: 'Name is required' });
-          return;
+        console.log('Received model creation request:', { name, description, brand, category });
+        
+        // Validate all required fields
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+          return res.status(400).json({ error: 'Valid name is required' });
         }
+        
+        if (!brand || typeof brand !== 'string' || brand.trim() === '') {
+          return res.status(400).json({ error: 'Valid brand is required' });
+        }
+        
+        if (!category || typeof category !== 'string' || category.trim() === '') {
+          return res.status(400).json({ error: 'Valid category is required' });
+        }
+        
         try {
-          const id = await createModel(name, description, brand, category);
-          res.status(201).json({ message: 'Model created', id });
+          console.log('Calling createModel with validated data');
+          const id = await createModel(
+            name.trim(), 
+            description || '', 
+            brand.trim(), 
+            category.trim()
+          );
+          console.log('Model created with ID:', id);
+          return res.status(201).json({ message: 'Model created', id });
         } catch (error:any) {
-          console.error('Error creating model:', error);
-          res.status(500).json({ 
+          console.error('Detailed error creating model:', error);
+          
+          // Handle specific error types
+          if (error.code === '23502') {
+            // Not null constraint violation
+            return res.status(400).json({ 
+              error: 'Missing required field',
+              details: error.message || 'A required field is missing'
+            });
+          }
+          
+          if (error.code === '23505') {
+            // Unique constraint violation
+            return res.status(409).json({
+              error: 'Model already exists',
+              details: 'A model with this name already exists in this category and brand.'
+            });
+          }
+          
+          return res.status(500).json({ 
             error: 'Failed to create model',
-            details: error.message || error 
+            details: error.message || 'Unknown error occurred'
           });
         }
         break;
