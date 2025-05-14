@@ -41,7 +41,7 @@ const Index: NextPage = () => {
 	const [id, setId] = useState<string>('');
 	const today = new Date();
 	const [startDate, setStartDate] = useState<string>('');  // Empty string to not filter by date
-	const { data: StockInOuts, error, isLoading } = useGetStockInOutByDateQuery({ startDate, searchtearm: debouncedSearchTerm });
+	const { data: StockInOuts, error, isLoading, refetch } = useGetStockInOutByDateQuery({ startDate, searchtearm: debouncedSearchTerm });
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
 	const [updateStockInOut] = useUpdateStockInOutMutation();
@@ -92,6 +92,13 @@ const Index: NextPage = () => {
 
 		return () => clearTimeout(timer);
 	}, [searchTerm]);
+
+	// Effect to refetch data when startDate changes
+	useEffect(() => {
+		if (startDate) {
+			refetch();
+		}
+	}, [startDate, refetch]);
 
 	// Check for items at or below reorder level
 	useEffect(() => {
@@ -326,6 +333,11 @@ const Index: NextPage = () => {
 		setSearchTerm(value);
 	};
 
+	const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+		setStartDate(value);
+	};
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -453,9 +465,26 @@ const Index: NextPage = () => {
 											))}
 										</ChecksGroup>
 									</FormGroup>
-									<FormGroup label='Date' className='col-6'>
-										<Input type='date' onChange={(e: any) => setStartDate(e.target.value)} value={startDate} />
+									<FormGroup label='Date' className='col-12'>
+										<Input 
+											type='date' 
+											onChange={handleDateChange} 
+											value={startDate} 
+										/>
 									</FormGroup>
+									<div className='col-12 mt-2'>
+										<Button 
+											color='info' 
+											isLight 
+											className='w-100'
+											onClick={() => {
+												setStartDate('');
+												refetch();
+											}}
+										>
+											Clear Date Filter
+										</Button>
+									</div>
 								</div>
 							</div>
 						</DropdownMenu>
