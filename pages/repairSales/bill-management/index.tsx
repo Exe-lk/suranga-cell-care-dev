@@ -551,8 +551,7 @@ const Index: NextPage = () => {
 											{/* <th>Email</th> */}
 											<th>NIC</th>
 											<th>Cost</th>
-											{/* <th>Price</th>
-											<th>Status</th> */}
+											<th>Status</th>
 											{/* <th>Change Status</th> */}
 											{/* <th>Date out</th> */}
 											<th></th>
@@ -605,8 +604,7 @@ const Index: NextPage = () => {
 														<td>{bill.CustomerMobileNum}</td>
 														{/* <td>{bill.email}</td> */}
 														<td>{bill.NIC}</td>
-														{/* <td>{bill.cost}</td>
-														<td>{bill.Price}</td> */}
+														<td>{bill.cost}</td>
 														<td>
 															<span
 																className={`badge rounded-pill ${getStatusColorClass(
@@ -615,38 +613,6 @@ const Index: NextPage = () => {
 																{bill.Status}
 															</span>
 														</td>
-														{/* <td>
-															
-																<Select
-																	ariaLabel='Default select Status'
-																	// placeholder='Open this select Status'
-																	onChange={(e:any)=>{statuschange(bill.id,e.target.value)}}
-																	value={bill.Status}
-																	name='Status'
-																	
-																	validFeedback='Looks good!'>
-																	<Option value=''>
-																		Select the Status
-																	</Option>
-																	<Option value='Waiting'>
-																		Waiting
-																	</Option>
-																	<Option value='Ready to Repair'>
-																		Ready to Repair
-																	</Option>
-																	<Option value='In Progress'>
-																		In Progress
-																	</Option>
-																	<Option value='Reject'>
-																		Reject
-																	</Option>
-																	<Option value='Repair Completed'>
-																		Repair Completed
-																	</Option>
-																</Select>
-															
-														</td> */}
-														{/* <td>{bill.DateOut}</td> */}
 														<td>
 															<Button
 																icon='Edit'
