@@ -76,7 +76,12 @@ export const getSuppliers = async () => {
     .eq('status', true);
 
   if (error) throw error;
-  return data;
+  
+  // Transform data to match frontend camelCase naming
+  return data.map(supplier => ({
+    ...supplier,
+    mobileNumber: supplier.mobile_number
+  }));
 };
 
 // Get Deleted Suppliers
@@ -87,7 +92,12 @@ export const getDeleteSuppliers = async () => {
     .eq('status', false);
 
   if (error) throw error;
-  return data;
+  
+  // Transform data to match frontend camelCase naming
+  return data.map(supplier => ({
+    ...supplier,
+    mobileNumber: supplier.mobile_number
+  }));
 };
 
 // Get Supplier by ID
@@ -99,7 +109,12 @@ export const getSupplierById = async (id: string) => {
     .single();
 
   if (error) throw error;
-  return data;
+  
+  // Transform data to match frontend camelCase naming
+  return {
+    ...data,
+    mobileNumber: data.mobile_number
+  };
 };
 
 // Update Supplier

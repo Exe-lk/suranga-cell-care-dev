@@ -15,8 +15,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           res.status(400).json({ error: 'Phone Detail is required' });
           return;
         }
+        try {
         const id = await createBill(req.body);
         res.status(201).json({ message: 'Bill created', id });
+        } catch (err: any) {
+          console.error('Error creating bill:', err);
+          res.status(500).json({ 
+            error: 'Error creating bill', 
+            message: err.message,
+            details: err.details || err.toString(),
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+          });
+        }
         break;
       }
       case 'GET': {
@@ -50,7 +60,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
     }
-  } catch (error) {
-    res.status(500).json({ error: 'An error occurred', });
+  } catch (error: any) {
+    console.error('API Error:', error);
+    res.status(500).json({ 
+      error: 'An error occurred',
+      message: error.message,
+      details: error.details || error.toString(),
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }

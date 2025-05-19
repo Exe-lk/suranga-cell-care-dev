@@ -15,20 +15,28 @@ import { useGetCategories1Query } from '../redux/slices/category1ApiSlice';
 import { useGetModelsQuery } from '../redux/slices/modelApiSlice';
 import { useGetModels1Query } from '../redux/slices/model1ApiSlice';
 
-const getMonthFromTimestamp = (timestamp: { seconds: number }) => {
+const getMonthFromTimestamp = (timestamp: { seconds: number } | undefined) => {
+	// Return current month if timestamp is undefined
+	if (!timestamp || typeof timestamp.seconds !== 'number') {
+		return new Date().getMonth();
+	}
 	const date = new Date(timestamp.seconds * 1000);
 	return date.getMonth();
 };
-const countByMonth = (data: { timestamp: { seconds: number } }[]) => {
+
+const countByMonth = (data: { timestamp?: { seconds: number } }[] | undefined) => {
 	const monthsCount = Array(12).fill(0);
 	if (data && Array.isArray(data)) {
 		data.forEach((item) => {
-			const month = getMonthFromTimestamp(item.timestamp);
-			monthsCount[month] += 1;
+			if (item && item.timestamp) {
+				const month = getMonthFromTimestamp(item.timestamp);
+				monthsCount[month] += 1;
+			}
 		});
 	}
 	return monthsCount;
 };
+
 const TypeAnalatisk = () => {
 	const { data: brands } = useGetBrandsQuery(undefined);
 	const { data: brands1 } = useGetBrands1Query(undefined);
