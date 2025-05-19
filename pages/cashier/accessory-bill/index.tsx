@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../../firebaseConfig';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import Page from '../../../layout/Page/Page';
 import Card, { CardBody, CardTitle } from '../../../components/bootstrap/Card';
@@ -19,6 +17,7 @@ import SubHeader, {
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Accessory from '../../../components/accessory';
+import { useGetAccessoryBillsQuery } from '../../../redux/slices/accessoryBillApiSlice';
 
 interface Orders {
 	id: string;
@@ -29,123 +28,94 @@ interface Orders {
 	time: string;
 	orders: { category: string; price: number | string; name: string; quentity: any }[];
 }
-interface User {
-	cid: string;
-	image: string;
-	name: string;
-	position: string;
-	email: string;
-	mobile: number;
-	NIC: number;
-	profile_picture: string;
-}
 
 const Index: React.FC = () => {
 	const [searchyear, setSearchyear] = useState<number>(new Date().getFullYear());
 	const [searchmonth, setSearchmonth] = useState<string>('');
 	const [searchDate, setSearchDate] = useState<string>('');
-	const [orders, setOrders] = useState<any>();
 	const [data, setData] = useState<any[]>([]);
 	const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
-	const [user, setUser] = useState<User[]>([]);
 	const [expandedRow, setExpandedRow] = useState(null);
 	const [formStatus, setFormStatus] = useState<boolean>(false);
 	const [searchTerm, setSearchTerm] = useState(''); // State for search term
+	
+	const { data: accessoryBills, isLoading, isError, refetch } = useGetAccessoryBillsQuery(undefined);
+	
 	const toggleRow = (index: any) => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
 
 	const buttonRef = useRef<any>(null);
+
 	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'accessorybill');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as Orders;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setOrders(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
-			}
-		};
-		fetchData();
-	}, []);
-
-
-
-		useEffect(() => {
-			const handleKeyPress = (event: KeyboardEvent) => {
-			  // Check if the "F" key is pressed
-			  if (event.key === 'F' || event.key === 'f') {
+		const handleKeyPress = (event: KeyboardEvent) => {
+			// Check if the "F" key is pressed
+			if (event.key === 'F' || event.key === 'f') {
 				reloadPage();
-			  }
-			};
-
-			window.addEventListener('keydown', handleKeyPress);
-		
-			// Cleanup the event listener on component unmount
-			return () => {
-			  window.removeEventListener('keydown', handleKeyPress);
-			};
-		  }, []);
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const dataCollection = collection(firestore, 'user');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => {
-					const data = doc.data() as User;
-					return {
-						...data,
-						cid: doc.id,
-					};
-				});
-				setUser(firebaseData);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
 			}
 		};
-		fetchData();
+
+		window.addEventListener('keydown', handleKeyPress);
+	
+		// Cleanup the event listener on component unmount
+		return () => {
+			window.removeEventListener('keydown', handleKeyPress);
+		};
 	}, []);
 
 	useEffect(() => {
 		const filterOrdersByDate = () => {
-			return orders?.filter((order: any) => {
-				const orderDate = new Date(order.date);
-				const orderYear = orderDate.getFullYear();
-				const orderMonth = orderDate.toLocaleString('default', { month: 'short' });
-				const formattedSearchDate = new Date(searchDate).toDateString();
-
-				console.log(`Order Date: ${order.date}, Year: ${orderYear}, Month: ${orderMonth}`);
-				console.log(
-					`Search Year: ${searchyear}, Search Month: ${searchmonth}, Search Date: ${searchDate}`,
-				);
-
-				if (searchDate && new Date(order.date).toDateString() !== formattedSearchDate) {
-					return false;
+			if (!accessoryBills) return [];
+			
+			console.log('Filtering bills with date:', searchDate, 'month:', searchmonth);
+			
+			// If no filters are applied, return all bills
+			if (!searchDate && !searchmonth) {
+				return accessoryBills;
+			}
+			
+			return accessoryBills.filter((order: any) => {
+				try {
+					const orderDate = new Date(order.date);
+					const orderMonth = orderDate.toLocaleString('default', { month: 'short' });
+					
+					if (searchDate) {
+						const formattedSearchDate = new Date(searchDate).toDateString();
+						const formattedOrderDate = new Date(order.date).toDateString();
+						
+						console.log(`Comparing dates: ${formattedOrderDate} with ${formattedSearchDate}`);
+						
+						if (formattedOrderDate !== formattedSearchDate) {
+							return false;
+						}
+					}
+					
+					if (searchmonth && orderMonth !== searchmonth) {
+						return false;
+					}
+					
+					return true;
+				} catch (error) {
+					console.error('Error filtering order:', order, error);
+					return true; // Include records that cause errors in filtering
 				}
-				if (searchmonth && searchmonth !== orderMonth) {
-					return false;
-				}
-				// if (searchyear && searchyear !== orderYear) {
-				// 	return false;
-				// }
-				return true;
 			});
 		};
 
 		setFilteredOrders(filterOrdersByDate());
-	}, [orders, searchyear, searchmonth, searchDate]);
+	}, [accessoryBills, searchyear, searchmonth, searchDate]);
 
-	const getCashierName = (email: string) => {
-		const user1 = user.find((user: { email: string }) => user.email === email);
-		return user1 ? user1.name : 'Unknown';
-	};
+	// Add more explicit debugging for accessoryBills
+	useEffect(() => {
+		console.log('Accessory bills from Supabase:', accessoryBills);
+		
+		if (!accessoryBills || accessoryBills.length === 0) {
+			console.log('No accessory bills found in the response');
+		} else {
+			console.log('First accessory bill:', accessoryBills[0]);
+		}
+	}, [accessoryBills]);
+
 	const handleExport = (format: any) => {
 		if (format === 'csv') {
 			// Flatten data
@@ -165,13 +135,13 @@ const Index: React.FC = () => {
 				], // Header row
 			];
 
-			orders.forEach((order: any) => {
+			accessoryBills.forEach((order: any) => {
 				// Add the main order row
 				csvRows.push([
 					order.date,
 					order.time,
 					order.time,
-					getCashierName(order.casheir),
+					order.casheir,
 					order.id,
 					order.amount,
 					'', // Empty columns for item details
@@ -214,9 +184,11 @@ const Index: React.FC = () => {
 			document.body.removeChild(link);
 		}
 	};
+	
 	const reloadPage = () => {
-		window.location.reload();
-	  };
+		refetch();
+	};
+	
 	return (
 		<>
 			<PageWrapper>
@@ -282,164 +254,176 @@ const Index: React.FC = () => {
 										</Button>
 										</CardTitle>
 										<CardBody isScrollable className='table-responsive'>
-											<table className='table table-hover table-bordered border-primary'>
-												<thead className={'table-dark border-primary'}>
-													<tr>
-														<th>Date</th>
-														<th>Time</th>
-
-														<th>Bill No</th>
-														<th>Customer Name</th>
-														<th>Contact</th>
-														<th>Sub Total (LKR)</th>
-														<th></th>
-													</tr>
-												</thead>
-												<tbody>
-													{filteredOrders
-														?.filter((val) => {
-															if (searchTerm === '') {
-																return val;
-															} else if (
-																val.id
-																	.toString()
-																	.includes(searchTerm)
-															) {
-																return val;
-															}
-														})
-														.filter((val: any) => {
-															if (val.print === false) {
-																return val;
-															}
-														})
-														.sort((a: any, b: any) => b.id - a.id)
-														.map((order, index) => (
-															<React.Fragment key={index}>
-																<tr style={{ cursor: 'pointer' }}>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.date}
-																	</td>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.time}
-																	</td>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.id}
-																	</td>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.name}
-																	</td>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.contact}
-																	</td>
-																	<td
-																		onClick={() =>
-																			toggleRow(index)
-																		}>
-																		{order.amount-order.totalDiscount}.00
-																	</td>
-																	<td>
-																		<Button
-																			icon='Print'
-																			color='success'
-																			onClick={() => {
-																				setFormStatus(true),
-																					setData(order);
-																			}}>
-																			Print
-																		</Button>
-																	</td>
-																</tr>
-																{expandedRow === index && (
-																	<tr>
-																		<td colSpan={6}>
-																			<table className='table table-hover table-bordered border-warning'>
-																				<thead
-																					className={
-																						'table-dark border-warning'
-																					}>
-																					<tr>
-																						<th>
-																							Item
-																						</th>
-																						<th>
-																							Unit
-																							Price
-																						</th>
-
-																						<th>
-																							Quantity
-																						</th>
-																						<th>
-																							Total
-																							Price
-																						</th>
-																					</tr>
-																				</thead>
-																				<tbody>
-																					{order.orders.map(
-																						(
-																							data: any,
-																							dataIndex: any,
-																						) => (
-																							<tr
-																								key={
-																									dataIndex
-																								}>
-																								<td>
-																									{
-																										data.category
-																									}{' '}
-																									{
-																										data.model
-																									}{' '}
-																									{
-																										data.brand
-																									}
-																								</td>
-																								<td>
-																									{
-																										data.sellingPrice
-																									}
-																								</td>
-
-																								<td>
-																									{
-																										data.quantity
-																									}
-																								</td>
-																								<td>
-																									{data.sellingPrice *
-																										data.quantity}
-																									.00
-																								</td>
-																							</tr>
-																						),
-																					)}
-																				</tbody>
-																			</table>
+											{isLoading && (
+												<div className="d-flex justify-content-center my-3">
+													<div className="spinner-border text-primary" role="status">
+														<span className="visually-hidden">Loading...</span>
+													</div>
+												</div>
+											)}
+											
+											{isError && (
+												<div className="alert alert-danger" role="alert">
+													Error loading accessory bills. Please try again.
+												</div>
+											)}
+											
+											{!isLoading && !isError && (
+												<table className='table table-hover table-bordered border-primary'>
+													<thead className={'table-dark border-primary'}>
+														<tr>
+															<th>Date</th>
+															<th>Time</th>
+															<th>Bill No</th>
+															<th>Customer Name</th>
+															<th>Contact</th>
+															<th>Sub Total (LKR)</th>
+															<th></th>
+														</tr>
+													</thead>
+													<tbody>
+														{filteredOrders
+															?.filter((val) => {
+																if (searchTerm === '') {
+																	return true; // Return all records if no search term
+																} else if (val.id && val.id.toString().includes(searchTerm)) {
+																	return true; // Return matching records
+																}
+																return false; 
+															})
+															.sort((a: any, b: any) => {
+																// Make sorting safer by checking if id exists and is a number
+																const idA = typeof a.id === 'number' ? a.id : parseInt(a.id);
+																const idB = typeof b.id === 'number' ? b.id : parseInt(b.id);
+																return isNaN(idB) || isNaN(idA) ? 0 : idB - idA; // Fallback to 0 if NaN
+															})
+															.map((order, index) => (
+																<React.Fragment key={index}>
+																	<tr style={{ cursor: 'pointer' }}>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.date}
+																		</td>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.time}
+																		</td>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.id}
+																		</td>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.name}
+																		</td>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.contact}
+																		</td>
+																		<td
+																			onClick={() =>
+																				toggleRow(index)
+																			}>
+																			{order.amount - (order.totalDiscount || 0)}.00
+																		</td>
+																		<td>
+																			<Button
+																				icon='Print'
+																				color='success'
+																				onClick={() => {
+																					setFormStatus(true),
+																						setData(order);
+																				}}>
+																				Print
+																			</Button>
 																		</td>
 																	</tr>
-																)}
-															</React.Fragment>
-														))}
-												</tbody>
-											</table>
+																	{expandedRow === index && (
+																		<tr>
+																			<td colSpan={7}>
+																				<table className='table table-hover table-bordered border-warning'>
+																					<thead
+																						className={
+																							'table-dark border-warning'
+																						}>
+																						<tr>
+																							<th>
+																								Item
+																							</th>
+																							<th>
+																								Unit
+																								Price
+																							</th>
+
+																							<th>
+																								Quantity
+																							</th>
+																							<th>
+																								Total
+																								Price
+																							</th>
+																						</tr>
+																					</thead>
+																					<tbody>
+																						{order.orders.map(
+																							(
+																								data: any,
+																								dataIndex: any,
+																							) => (
+																								<tr
+																									key={
+																										dataIndex
+																									}>
+																									<td>
+																										{
+																											data.category
+																										}{' '}
+																										{
+																											data.model
+																										}{' '}
+																										{
+																											data.brand
+																										}
+																									</td>
+																									<td>
+																										{
+																											data.sellingPrice
+																										}
+																									</td>
+
+																									<td>
+																										{
+																											data.quantity
+																										}
+																									</td>
+																									<td>
+																										{data.sellingPrice *
+																											data.quantity}
+																										.00
+																									</td>
+																								</tr>
+																							),
+																						)}
+																					</tbody>
+																				</table>
+																			</td>
+																		</tr>
+																	)}
+																</React.Fragment>
+															))}
+													</tbody>
+												</table>
+											)}
 										</CardBody>
 									</Card>
 								</div>

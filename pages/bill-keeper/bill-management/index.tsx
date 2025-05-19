@@ -14,7 +14,6 @@ import Input from '../../../components/bootstrap/forms/Input';
 import Dropdown, { DropdownMenu, DropdownToggle } from '../../../components/bootstrap/Dropdown';
 import Button from '../../../components/bootstrap/Button';
 import Card, { CardBody, CardTitle } from '../../../components/bootstrap/Card';
-import { collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import BillAddModal from '../../../components/custom/BillAddModal';
 import BillDeleteModal from '../../../components/custom/BillDeleteModal';
 import BillEditModal from '../../../components/custom/BillEditModal1';
@@ -373,17 +372,50 @@ const Index: NextPage = () => {
 		});
 		if (result.isConfirmed) {
 			try {
-				const billRef = doc(firestore, "bill", id);
-				await updateDoc(billRef, { Status: value });
-		  
+				// Get the bill that needs to be updated
+				const billToUpdate = bills?.find((bill: any) => bill.id === id);
+				
+				if (!billToUpdate) {
+					throw new Error('Bill not found');
+				}
+				
+				// Prepare values for update
+				const values = {
+					id: billToUpdate.billNumber, // Use billNumber as id for Supabase
+					billNumber: billToUpdate.billNumber,
+					dateIn: billToUpdate.dateIn,
+					phoneDetail: billToUpdate.phoneDetail,
+					phoneModel: billToUpdate.phoneModel,
+					repairType: billToUpdate.repairType,
+					technicianNum: billToUpdate.technicianNum,
+					CustomerName: billToUpdate.CustomerName,
+					CustomerMobileNum: billToUpdate.CustomerMobileNum,
+					email: billToUpdate.email,
+					NIC: billToUpdate.NIC,
+					componentCost: billToUpdate.componentCost,
+					repairCost: billToUpdate.repairCost,
+					cost: billToUpdate.cost,
+					Price: billToUpdate.Price,
+					Status: value, // Use the new status value
+					DateOut: billToUpdate.DateOut,
+					status: billToUpdate.status,
+					// Include other fields from the bill as needed
+					Condition: billToUpdate.Condition,
+					Item: billToUpdate.Item,
+					color: billToUpdate.color,
+					IME: billToUpdate.IME,
+				};
+				
+				// Use Redux mutation to update in Supabase
+				await updateBill(values);
+				
 				Swal.fire("Updated!", "The status has been updated.", "success");
-				refetch(); // Ensure refetch is defined and available in your context
-			  } catch (error) {
+				refetch(); // Refresh the data
+			} catch (error) {
+				console.error("Error updating status:", error);
 				Swal.fire("Error!", "Failed to update status.", "error");
-				console.error("Error updating document:", error);
-			  }
+			}
 		}
-
 	};
 	useEffect(() => {
 		if (inputRef.current) {

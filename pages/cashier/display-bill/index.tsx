@@ -384,23 +384,35 @@ function index() {
 			try {
 				const result = await Swal.fire({
 					title: 'Are you sure?',
-					text: 'You will not be able to recover this status!',
+					text: 'You will not be able to recover this bill!',
 					icon: 'warning',
 					showCancelButton: true,
 					confirmButtonColor: '#3085d6',
 					cancelButtonColor: '#d33',
-					confirmButtonText: 'Yes, Print Bill!',
+					confirmButtonText: 'Yes, Save Bill!',
 				});
-
 				if (result.isConfirmed) {
+					Swal.fire({
+						title: 'Processing...',
+						text: 'Saving bill data',
+						allowOutsideClick: false,
+						didOpen: () => {
+							Swal.showLoading();
+						},
+					});
 					const totalAmount = calculateSubTotal();
 					const currentDate = new Date();
 					const formattedDate = currentDate.toLocaleDateString();
-					const savedDrafts = JSON.parse(localStorage.getItem('drafts1') || '[]');
-					const updatedDrafts = savedDrafts.filter(
-						(draft: any) => draft.draftId !== currentDraftId,
-					);
-					localStorage.setItem('drafts1', JSON.stringify(updatedDrafts));
+					
+					// Remove from drafts if loaded from a draft
+					if (currentDraftId) {
+						const savedDrafts = JSON.parse(localStorage.getItem('drafts1') || '[]');
+						const updatedDrafts = savedDrafts.filter(
+							(draft: any) => draft.draftId !== currentDraftId,
+						);
+						localStorage.setItem('drafts1', JSON.stringify(updatedDrafts));
+					}
+					
 					const values = {
 						orders: orderedItems,
 						time: currentTime,
@@ -408,167 +420,83 @@ function index() {
 						amount: Number(totalAmount),
 						type: payment ? 'cash' : 'card',
 						id: id1,
+						cashier: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').name : 'Unknown',
 					};
-					console.log(values);
-					const response: any = await addbillDisplay({"values":values}).unwrap();
-					console.log(response);
-
-					Swal.fire({
-						title: 'Success',
-						text: 'Bill has been added successfully.',
-						icon: 'success',
-						showConfirmButton: false,
-						timer: 1000,
-					});
-					const selectedBarcodes = selectedBarcode;
-					const subStockUpdatePromises = selectedBarcodes.map(async (subid: any) => {
-						const values = {
-							status: true,
-							soldDate: formattedDate,
-						};
-						try {
-							await updateSubStockInOut({
-								id: subid.id,
-								subid: subid.barcode,
-								values,
-							}).unwrap();
-							console.log(`Sub-stock with ID: ${subid} updated successfully.`);
-						} catch (error) {
-							console.error(`Failed to update sub-stock with ID: ${subid}`, error);
+					
+					try {
+						// Call the API to save the bill
+						const response: any = await addbillDisplay({"values": values}).unwrap();
+						console.log('Bill saved response:', response);
+						
+						// Update stock status for each item
+						const selectedBarcodes = selectedBarcode;
+						const subStockUpdatePromises = selectedBarcodes.map(async (subid: any) => {
+							const values = {
+								status: true,
+								soldDate: formattedDate,
+							};
+							try {
+								await updateSubStockInOut({
+									id: subid.id,
+									subid: subid.barcode,
+									values,
+								}).unwrap();
+								console.log(`Sub-stock with ID: ${subid.barcode} updated successfully.`);
+							} catch (error) {
+								console.error(`Failed to update sub-stock with ID: ${subid.barcode}`, error);
+								throw error;
+							}
+						});
+						
+						await Promise.all(subStockUpdatePromises);
+						
+						// Show success message
+						Swal.fire({
+							title: 'Success',
+							text: 'Bill has been saved successfully.',
+							icon: 'success',
+							showConfirmButton: false,
+							timer: 1500,
+						});
+						
+						// Reset form
+						setOrderedItems([]);
+						setAmount(0);
+						setId(prevId => prevId + 1); // Increment bill ID for next bill
+						
+						// Optionally focus on the product dropdown for the next bill
+						if (dropdownRef.current) {
+							dropdownRef.current.focus();
 						}
-					});
-					await Promise.all(subStockUpdatePromises);
-					setOrderedItems([]);
-					setAmount(0);
+					} catch (error: any) {
+						console.error('Error saving bill:', error);
+						Swal.fire({
+							title: 'Error',
+							text: error.data?.message || 'Failed to save bill. Please try again.',
+							icon: 'error',
+						});
+					}
 				}
-			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				alert('An error occurred. Please try again later.');
+			} catch (error: any) {
+				console.error('Error processing bill:', error);
+				Swal.fire({
+					title: 'Error',
+					text: 'An unexpected error occurred. Please try again.',
+					icon: 'error',
+				});
 			}
 		} else {
-			Swal.fire('Warning..!', 'Insufficient amount', 'error');
+			Swal.fire('Warning!', 'Insufficient amount', 'error');
 		}
 	};
+	
 	const printbill = async (e: any) => {
-			if (
-				amount >= Number(calculateSubTotal()) &&
-				amount > 0 &&
-				Number(calculateSubTotal()) > 0
-			) {
-				try {
-					const result = await Swal.fire({
-						title: 'Are you sure?',
-						// text: 'You will not be able to recover this status!',
-						icon: 'warning',
-						showCancelButton: true,
-						confirmButtonColor: '#3085d6',
-						cancelButtonColor: '#d33',
-						confirmButtonText: 'Yes, Print Bill!',
-					});
-	
-					if (result.isConfirmed) {
-						const currentDate = new Date();
-						const formattedDate = currentDate.toLocaleDateString();
-						if (!isQzReady || typeof window.qz === 'undefined') {
-							console.error('QZ Tray is not ready.');
-							alert('QZ Tray is not loaded yet. Please try again later.');
-							return;
-						}
-						try {
-							if (!window.qz.websocket.isActive()) {
-								await window.qz.websocket.connect();
-							}
-							const config = window.qz.configs.create('EPSON TM-U220 Receipt');
-							const data = [
-								'\x1B\x40',
-								'\x1B\x61\x01',
-								'\x1D\x21\x11',
-								'\x1B\x45\x01', // ESC E 1 - Bold on
-								'Suranga Cell Care\n\n', // Store name
-								'\x1B\x45\x00', // ESC E 0 - Bold off
-								'\x1D\x21\x00',
-								'\x1B\x4D\x00',
-								'No.524/1/A,\nKandy Road,Kadawatha\n',
-								'011 292 6030/ 071 911 1144\n',
-								'\x1B\x61\x00',
-								`Date        : ${formattedDate}\n`,
-								`START TIME  : ${currentTime}\n`,
-								`INVOICE NO  : ${id1}\n`,
-								'\x1B\x61\x00',
-								'---------------------------------\n',
-								'Product Qty  U/Price    Net Value\n',
-								'---------------------------------\n',
-								...orderedItems.map(
-									({ name, quantity, sellingPrice, category, model, brand }) => {
-										const netValue = sellingPrice * quantity;
-										const truncatedName =
-											brand.length > 10 ? brand.substring(0, 10) + '...' : brand;
-	
-										// Define receipt width (e.g., 42 characters for typical printers)
-										const receiptWidth = 42;
-	
-										// Create the line dynamically
-										const line = `${category} ${model} ${truncatedName}`;
-										const quantityStr = `${quantity}`;
-										const priceStr = `${sellingPrice.toFixed(2)}`;
-										const netValueStr = `${netValue.toFixed(2)}`;
-	
-										// Calculate spacing to align `netValueStr` to the right
-										const totalLineLength =
-											line.length +
-											quantityStr.length +
-											priceStr.length +
-											netValueStr.length +
-											6; // 6 spaces for fixed spacing
-										const remainingSpaces = receiptWidth - totalLineLength;
-	
-										return `${line}\n         ${quantityStr}    ${priceStr}${' '.repeat(
-											remainingSpaces,
-										)}${netValueStr}\n`;
-									},
-								),
-	
-								'---------------------------------\n',
-								'\x1B\x61\x01',
-								'\x1B\x45\x01',
-								'\x1D\x21\x10',
-								'\x1B\x45\x01',
-								`SUB TOTAL\nRs ${calculateSubTotal()}\n`,
-								'\x1B\x45\x00',
-								'\x1D\x21\x00',
-								'\x1B\x45\x00',
-								'\x1B\x61\x00',
-								'---------------------------------\n',
-								`Cash Received   : ${amount}.00\n`,
-								`Balance         : ${(amount - Number(calculateSubTotal())).toFixed(
-									2,
-								)}\n`,
-								`No. of Pieces   : ${orderedItems.length}\n`,
-								'---------------------------------\n',
-								'\x1B\x61\x01',
-								'THANK YOU COME AGAIN !\n',
-								'---------------------------------\n',
-								'\x1B\x61\x01',
-								'Retail POS by EXE.lk\n',
-								'Call: 070 332 9900\n',
-								'---------------------------------\n',
-								'\x1D\x56\x41',
-							];
-							await window.qz.print(config, data);
-						} catch (error) {
-							console.error('Printing failed', error);
-						}
-					}
-				} catch (error) {
-					console.error('Error during handleUpload: ', error);
-					alert('An error occurred. Please try again later.');
-				}
-			} else {
-				Swal.fire('Warning..!', 'Insufficient amount', 'error');
-			}
-		};
-		const startbill = async () => {
-			if (orderedItems.length > 0) {
+		if (
+			amount >= Number(calculateSubTotal()) &&
+			amount > 0 &&
+			Number(calculateSubTotal()) > 0
+		) {
+			try {
 				const result = await Swal.fire({
 					title: 'Are you sure?',
 					// text: 'You will not be able to recover this status!',
@@ -578,17 +506,122 @@ function index() {
 					cancelButtonColor: '#d33',
 					confirmButtonText: 'Yes, Print Bill!',
 				});
-	
+
 				if (result.isConfirmed) {
-					setOrderedItems([]);
-					setAmount(0);
-					setQuantity(0);
-					setSelectedProduct('');
-					if (dropdownRef.current) {
-						dropdownRef.current.focus();
+					const currentDate = new Date();
+					const formattedDate = currentDate.toLocaleDateString();
+					if (!isQzReady || typeof window.qz === 'undefined') {
+						console.error('QZ Tray is not ready.');
+						alert('QZ Tray is not loaded yet. Please try again later.');
+						return;
+					}
+					try {
+						if (!window.qz.websocket.isActive()) {
+							await window.qz.websocket.connect();
+						}
+						const config = window.qz.configs.create('EPSON TM-U220 Receipt');
+						const data = [
+							'\x1B\x40',
+							'\x1B\x61\x01',
+							'\x1D\x21\x11',
+							'\x1B\x45\x01', // ESC E 1 - Bold on
+							'Suranga Cell Care\n\n', // Store name
+							'\x1B\x45\x00', // ESC E 0 - Bold off
+							'\x1D\x21\x00',
+							'\x1B\x4D\x00',
+							'No.524/1/A,\nKandy Road,Kadawatha\n',
+							'011 292 6030/ 071 911 1144\n',
+							'\x1B\x61\x00',
+							`Date        : ${formattedDate}\n`,
+							`START TIME  : ${currentTime}\n`,
+							`INVOICE NO  : ${id1}\n`,
+							'\x1B\x61\x00',
+							'---------------------------------\n',
+							'Product Qty  U/Price    Net Value\n',
+							'---------------------------------\n',
+							...orderedItems.map(
+								({ name, quantity, sellingPrice, category, model, brand }) => {
+									const netValue = sellingPrice * quantity;
+									const truncatedName =
+										brand.length > 10 ? brand.substring(0, 10) + '...' : brand;
+
+									// Define receipt width (e.g., 42 characters for typical printers)
+									const receiptWidth = 42;
+
+									// Create the line dynamically
+									const line = `${category} ${model} ${truncatedName}`;
+									const quantityStr = `${quantity}`;
+									const priceStr = `${sellingPrice.toFixed(2)}`;
+									const netValueStr = `${netValue.toFixed(2)}`;
+
+									// Calculate spacing to align `netValueStr` to the right
+									const totalLineLength =
+										line.length +
+										quantityStr.length +
+										priceStr.length +
+										netValueStr.length +
+										6; // 6 spaces for fixed spacing
+									const remainingSpaces = receiptWidth - totalLineLength;
+
+									return `${line}\n         ${quantityStr}    ${priceStr}${' '.repeat(
+										remainingSpaces,
+									)}${netValueStr}\n`;
+								},
+							),
+
+							'---------------------------------\n',
+							'\x1B\x61\x01',
+							'\x1B\x45\x01',
+							'\x1D\x21\x10',
+							'\x1B\x45\x01',
+							`SUB TOTAL\nRs ${calculateSubTotal()}\n`,
+							'\x1B\x45\x00',
+							'\x1D\x21\x00',
+							'\x1B\x45\x00',
+							'\x1B\x61\x00',
+							'---------------------------------\n',
+							`Cash Received   : ${amount}.00\n`,
+							`Balance         : ${(amount - Number(calculateSubTotal())).toFixed(
+								2,
+							)}\n`,
+							`No. of Pieces   : ${orderedItems.length}\n`,
+							'---------------------------------\n',
+							'\x1B\x61\x01',
+							'THANK YOU COME AGAIN !\n',
+							'---------------------------------\n',
+							'\x1B\x61\x01',
+							'Retail POS by EXE.lk\n',
+							'Call: 070 332 9900\n',
+							'---------------------------------\n',
+							'\x1D\x56\x41',
+						];
+						await window.qz.print(config, data);
+					} catch (error) {
+						console.error('Printing failed', error);
 					}
 				}
-			} else {
+			} catch (error) {
+				console.error('Error during handleUpload: ', error);
+				alert('An error occurred. Please try again later.');
+			}
+		} else {
+			Swal.fire('Warning!', 'Insufficient amount', 'error');
+		}
+	};
+	
+	const startbill = async () => {
+		if (orderedItems.length > 0) {
+			const result = await Swal.fire({
+				title: 'Are you sure?',
+				// text: 'You will not be able to recover this status!',
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonColor: '#3085d6',
+				cancelButtonColor: '#d33',
+				confirmButtonText: 'Yes, Print Bill!',
+			});
+
+			if (result.isConfirmed) {
 				setOrderedItems([]);
 				setAmount(0);
 				setQuantity(0);
@@ -597,7 +630,16 @@ function index() {
 					dropdownRef.current.focus();
 				}
 			}
-		};
+		} else {
+			setOrderedItems([]);
+			setAmount(0);
+			setQuantity(0);
+			setSelectedProduct('');
+			if (dropdownRef.current) {
+				dropdownRef.current.focus();
+			}
+		}
+	};
 
 	const handleProductChange = (value: string) => {
 		const productPrefix = value.slice(0, 4);

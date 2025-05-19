@@ -18,3 +18,16 @@ export const updaterepairedPhone = async (id: string, Status: string) => {
     throw error;
   }
 };
+
+export const createBill = async (data: any) => {
+  const { billNumber, ...rest } = data;
+  const status = true;
+
+  const { error } = await supabase
+    .from('bill')
+    .upsert([{ billNumber, status, ...rest }], { onConflict: 'billNumber' });
+
+  if (error) throw error;
+
+  return billNumber;
+};
