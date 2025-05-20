@@ -114,10 +114,19 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 
 	const handleUploadimage = async () => {
 		if (imageurl) {
+			// Showing upload progress
+			Swal.fire({
+				title: 'Uploading NIC image...',
+				html: 'Please wait while your image is being uploaded.<br><div class="spinner-border" role="status"></div>',
+				allowOutsideClick: false,
+				showCancelButton: false,
+				showConfirmButton: false,
+			});
+			
 			// Assuming generatePDF returns a Promise
 			const pdfFile = imageurl;
-			console.log(imageurl);
-			const storageRef = ref(storage, `nic/${pdfFile.name}`);
+			console.log("Uploading image:", pdfFile.name);
+			const storageRef = ref(storage, `nic/${pdfFile.name}_${Date.now()}`); // Add timestamp to prevent name collisions
 			const uploadTask = uploadBytesResumable(storageRef, pdfFile);
 
 			return new Promise((resolve, reject) => {
@@ -127,21 +136,20 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 						const progress1 = Math.round(
 							(snapshot.bytesTransferred / snapshot.totalBytes) * 100,
 						);
+						console.log("Upload progress:", progress1);
 					},
 					(error) => {
-						console.error(error.message);
+						console.error("Upload error:", error.message);
 						reject(error.message);
 					},
 					() => {
 						getDownloadURL(uploadTask.snapshot.ref)
 							.then((url) => {
 								console.log('File uploaded successfully. URL:', url);
-
-								console.log(url);
 								resolve(url); // Resolve the Promise with the URL
 							})
 							.catch((error) => {
-								console.error(error.message);
+								console.error("Failed to get download URL:", error.message);
 								reject(error.message);
 							});
 					},
@@ -246,7 +254,8 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		},
 		onSubmit: async (values) => {
 			try {
-				const process = Swal.fire({
+				// Show processing modal
+				Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
 					allowOutsideClick: false,
@@ -254,50 +263,79 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					showConfirmButton: false,
 				});
 				
+				// 1. Upload image if provided
 				let url = '';
-				if (imageurl) {
-					url = (await handleUploadimage()) as string;
+				try {
+					if (imageurl) {
+						console.log("Starting image upload");
+						url = (await handleUploadimage()) as string;
+						console.log("Image upload completed:", url);
+					}
+				} catch (uploadError) {
+					console.error("Image upload failed:", uploadError);
+					Swal.fire({
+						icon: 'error',
+						title: 'Image Upload Failed',
+						text: `Could not upload the NIC image: ${uploadError}`,
+					});
+					return; // Stop the submission process
 				}
 				
+				// 2. Prepare data for API
+				const stockInData = {
+					...values,
+					barcode: generatedbarcode,
+					NIC_Photo: url,
+				};
+				
+				console.log("Submitting stock in data:", stockInData);
+				
 				try {
-					// First, add the stock-in record
-					const response: any = await addstockIn({
-						...values,
-						barcode: generatedbarcode,
-						NIC_Photo: url,
-					}).unwrap();
+					// 3. Add the stock-in record
+					const response = await addstockIn(stockInData).unwrap();
+					console.log("Stock in response:", response);
 					
-					// Then update the item quantity
-					if (stockInData && stockInData.id) {
-						const currentQuantity = parseInt(stockInData.quantity || '0', 10);
+					// 4. Update the item quantity
+					if (stockIn?.id) {
+						const currentQuantity = parseInt(stockIn.quantity || '0', 10);
 						const addedQuantity = parseInt(values.quantity || '0', 10);
 						const newQuantity = (currentQuantity + addedQuantity).toString();
 						
+						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity}`);
+						
 						// Call the update API to update the item quantity
 						await updateStockInOut({
-							id: stockInData.id,
+							id: stockIn.id,
 							quantity: newQuantity,
-							type: stockInData.type
+							type: stockIn.type
 						});
 					}
 					
-					refetch();
+					// 5. Refresh data and show success
+					await refetch();
 					await Swal.fire({
 						icon: 'success',
 						title: 'Stock In Added Successfully',
 					});
 					formik.resetForm();
 					setIsOpen(false);
-				} catch (error) {
-					console.error('Error during stock in:', error);
+				} catch (apiError: any) {
+					// Handle API errors
+					console.error('Error during stock in API call:', apiError);
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to add stock in. Please try again.',
+						text: apiError.data?.error || 'Failed to add stock in. Please try again.',
 					});
 				}
 			} catch (error) {
-				console.error('Error:', error);
+				// Handle any other errors
+				console.error('Unexpected error during stock in:', error);
+				await Swal.fire({
+					icon: 'error',
+					title: 'Error',
+					text: 'An unexpected error occurred. Please try again.',
+				});
 			}
 		},
 	});
