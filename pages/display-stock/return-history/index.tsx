@@ -1,25 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../../firebaseConfig';
-import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
-import Page from '../../../layout/Page/Page';
-import Card, { CardBody, CardTitle } from '../../../components/bootstrap/Card';
-import { number } from 'prop-types';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
+import Swal from 'sweetalert2';
+import Button from '../../../components/bootstrap/Button';
+import Card, {
+	CardBody,
+	CardHeader,
+	CardLabel,
+	CardTitle,
+} from '../../../components/bootstrap/Card';
 import Dropdown, {
 	DropdownItem,
 	DropdownMenu,
 	DropdownToggle,
 } from '../../../components/bootstrap/Dropdown';
-import Button from '../../../components/bootstrap/Button';
+import Input from '../../../components/bootstrap/forms/Input';
+import Page from '../../../layout/Page/Page';
+import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
 import SubHeader, {
 	SubHeaderLeft,
-	SubHeaderRight,
-	SubheaderSeparator,
 } from '../../../layout/SubHeader/SubHeader';
 import Icon from '../../../components/icon/Icon';
-import Input from '../../../components/bootstrap/forms/Input';
-import Swal from 'sweetalert2';
-import { supabase } from '../../../lib/supabase';
+import { useGetAllReturnsQuery } from '../../../redux/slices/returnDisplayApiSlice';
+import moment from 'moment';
+
 interface User {
 	cid: string;
 	image: string;
@@ -31,151 +34,76 @@ interface User {
 	profile_picture: string;
 }
 
+interface ReturnItem {
+	id: number;
+	barcode: string;
+	brand: string;
+	category: string;
+	model: string;
+	condition: string;
+	date: string;
+}
+
 const Index: React.FC = () => {
-	const [searchyear, setSearchyear] = useState<number>(new Date().getFullYear());
-	const [searchmonth, setSearchmonth] = useState<string>('');
-	const [searchDate, setSearchDate] = useState<string>('');
-	const [orders, setOrders] = useState<any[]>([]);
-	const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
-	const [user, setUser] = useState<User[]>([]);
-	const [expandedRow, setExpandedRow] = useState(null);
-	const [searchTerm, setSearchTerm] = useState(''); // State for search term
-	const invoiceRef: any = useRef();
+	const router = useRouter();
+	const [expandedRow, setExpandedRow] = useState<number | null>(null);
+	const [searchTerm, setSearchTerm] = useState('');
+	const [searchDate, setSearchDate] = useState('');
+	const [users, setUsers] = useState<User[]>([]);
+	const [filteredOrders, setFilteredOrders] = useState<ReturnItem[]>([]);
 	const [chunks, setChunks] = useState<any[]>([]);
-	const [orderedItems, setOrderedItems] = useState<any>();
+	const [orderedItems, setOrderedItems] = useState<any>({});
+	const invoiceRef = useRef<HTMLDivElement>(null);
+
+	// Use the RTK Query hook to fetch returns
+	const { data: returns, error, isLoading } = useGetAllReturnsQuery();
+
+	// Toggle row expansion
 	const toggleRow = (index: any) => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
+
+	// Filter orders based on date
 	useEffect(() => {
-		const fetchOrders = async () => {
-			try {
-				const { data, error } = await supabase
-					.from('returnDisplay')
-					.select('*');
-	
-				if (error) throw error;
-	
-				const mappedData = data.map((item) => ({
-					...item,
-					cid: item.id, // Supabase includes `id` automatically if you select '*'
-				}));
-	
-				setOrders(mappedData);
-			} catch (error) {
-				console.error('Error fetching orders: ', error);
+		if (returns) {
+			if (searchDate) {
+				const dateFormatted = moment(searchDate).format('MMM D YYYY');
+				const filtered = returns.filter((item) => item.date === dateFormatted);
+				setFilteredOrders(filtered);
+			} else {
+				setFilteredOrders(returns);
 			}
-		};
-	
-		fetchOrders();
-	}, []);
-	
-	useEffect(() => {
-		const fetchUsers = async () => {
-			try {
-				const { data, error } = await supabase
-					.from('UserManagement')
-					.select('*');
-	
-				if (error) throw error;
-	
-				const mappedData = data.map((item) => ({
-					...item,
-					cid: item.id,
-				}));
-	
-				setUser(mappedData);
-			} catch (error) {
-				console.error('Error fetching users: ', error);
-			}
-		};
-	
-		fetchUsers();
-	}, []);
+		}
+	}, [returns, searchDate]);
 
-	useEffect(() => {
-		const filterOrdersByDate = () => {
-			return orders.filter((order) => {
-				const orderDate = new Date(order.date);
-				const orderYear = orderDate.getFullYear();
-				const orderMonth = orderDate.toLocaleString('default', { month: 'short' });
-				const formattedSearchDate = new Date(searchDate).toDateString();
-
-				console.log(`Order Date: ${order.date}, Year: ${orderYear}, Month: ${orderMonth}`);
-				console.log(
-					`Search Year: ${searchyear}, Search Month: ${searchmonth}, Search Date: ${searchDate}`,
-				);
-
-				if (searchDate && new Date(order.date).toDateString() !== formattedSearchDate) {
-					return false;
-				}
-				if (searchmonth && searchmonth !== orderMonth) {
-					return false;
-				}
-				// if (searchyear && searchyear !== orderYear) {
-				// 	return false;
-				// }
-				return true;
-			});
-		};
-
-		setFilteredOrders(filterOrdersByDate());
-	}, [orders, searchyear, searchmonth, searchDate]);
-
-	const getCashierName = (email: string) => {
-		const user1 = user.find((user: { email: string }) => user.email === email);
-		return user1 ? user1.name : 'Unknown';
-	};
-	const handleExport = (format: any) => {
-		if (format === 'csv') {
-			// Flatten data
-			const csvRows = [
-				[
-					'Date',
-					'Start Time',
-					'End Time',
-					'Cashier',
-					'Bill No',
-					'Sub Total',
-					'Item Name',
-					'Unit Price',
-					'Discount',
-					'Quantity',
-					'Total Price',
-				], // Header row
+	// Export data to CSV
+	const handleExport = (format: string) => {
+		if (format === 'csv' && filteredOrders.length > 0) {
+			// Create headers
+			const headers = [
+				'ID',
+				'Date',
+				'Barcode',
+				'Condition',
+				'Category',
+				'Brand',
+				'Model',
 			];
 
-			orders.forEach((order) => {
-				// Add the main order row
-				csvRows.push([
-					order.date,
-					order.time,
-					order.time,
-					getCashierName(order.casheir),
-					order.id,
-					order.amount,
-					'', // Empty columns for item details
-					'',
-					'',
-					'',
-					'',
-				]);
+			// Create rows
+			const csvRows = [headers];
 
-				// Add rows for each item
-				order.orders.forEach((item: any) => {
-					csvRows.push([
-						'', // Empty columns for the order details
-						'',
-						'',
-						'',
-						'',
-						'',
-						item.name,
-						item.price,
-						item.discount,
-						item.quantity,
-						item.price * item.quantity,
-					]);
-				});
+			// Add data rows
+			filteredOrders.forEach((item) => {
+				csvRows.push([
+					item.id.toString(),
+					item.date,
+					item.barcode,
+					item.condition,
+					item.category,
+					item.brand,
+					item.model,
+				]);
 			});
 
 			// Convert to CSV string
@@ -187,47 +115,13 @@ const Index: React.FC = () => {
 			const encodedUri = encodeURI(csvContent);
 			const link = document.createElement('a');
 			link.setAttribute('href', encodedUri);
-			link.setAttribute('download', 'purchasing_history.csv');
-			document.body.appendChild(link); // Required for Firefox
+			link.setAttribute('download', 'return_history.csv');
+			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 		}
 	};
-	const chunkItems = (array: any[], chunkSize: number) => {
-		const chunks = [];
-		for (let i = 0; i < array.length; i += chunkSize) {
-			chunks.push(array.slice(i, i + chunkSize));
-		}
 
-		return chunks;
-	};
-
-	const handleprint = async (order: any) => {
-		const chunks = chunkItems(order.orders, 5);
-		await setChunks(chunks);
-		await setOrderedItems(order);
-		console.log(order);
-		const printContent: any = invoiceRef.current.innerHTML;
-
-		// Temporarily hide other content on the page
-		const originalContent = document.body.innerHTML;
-		document.body.innerHTML = printContent;
-
-		// Trigger the print dialog
-		window.print();
-
-		// Restore the original content after printing
-		document.body.innerHTML = originalContent;
-
-		Swal.fire({
-			title: 'Success',
-			text: 'Bill has been added successfully.',
-			icon: 'success',
-			showConfirmButton: false,
-			timer: 1000,
-		});
-		window.location.reload();
-	};
 	return (
 		<>
 			<PageWrapper>
@@ -242,7 +136,7 @@ const Index: React.FC = () => {
 							id='searchInput'
 							type='search'
 							className='border-0 shadow-none bg-transparent'
-							placeholder='Search...'
+							placeholder='Search by barcode, brand, or model...'
 							onChange={(event: any) => {
 								setSearchTerm(event.target.value);
 							}}
@@ -256,7 +150,7 @@ const Index: React.FC = () => {
 							<Card stretch>
 								<CardTitle className='d-flex justify-content-between align-items-center m-4'>
 									<div className='mt-2 mb-4'>
-										Select date :
+										Select date:
 										<input
 											type='date'
 											onChange={(e: any) => setSearchDate(e.target.value)}
@@ -281,59 +175,77 @@ const Index: React.FC = () => {
 									</Dropdown>
 								</CardTitle>
 								<CardBody isScrollable className='table-responsive'>
-									<table className='table table-hover table-bordered border-primary'>
-										<thead className={'table-dark border-primary'}>
-											<tr>
-												<th>Return Id </th>
-												<th>Date</th>
-												<th>Barcode</th>
-												<th>Condition </th>
-												<td>Category</td>
-												<th>Brand</th>
-												<th>Model</th>
-											</tr>
-										</thead>
-										<tbody>
-											{filteredOrders
-
-												.filter((val) => {
-													if (searchTerm === '') {
-														return val;
-													} else if (
-														val.cid.toString().includes(searchTerm)
-													) {
-														return val;
-													}
-												})
-												.sort((a: any, b: any) => b.id - a.id)
-												.map((order: any, index) => (
-													<React.Fragment key={index}>
-														<tr style={{ cursor: 'pointer' }}>
-															<td>{order.cid}</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.date}
-															</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.barcode}
-															</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.condition}
-															</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.category}
-															</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.brand}
-															</td>
-															<td onClick={() => toggleRow(index)}>
-																{order.model}
-															</td>
-															
-														</tr>
-													</React.Fragment>
-												))}
-										</tbody>
-									</table>
+									{isLoading && <div className="text-center p-4">Loading return data...</div>}
+									{error && (
+										<div className="alert alert-danger m-4">
+											Error loading return data. Please try again.
+										</div>
+									)}
+									{!isLoading && !error && (
+										<table className='table table-hover table-bordered border-primary'>
+											<thead className={'table-dark border-primary'}>
+												<tr>
+													<th>Return ID</th>
+													<th>Date</th>
+													<th>Barcode</th>
+													<th>Condition</th>
+													<th>Category</th>
+													<th>Brand</th>
+													<th>Model</th>
+												</tr>
+											</thead>
+											<tbody>
+												{filteredOrders
+													.filter((item) => {
+														if (searchTerm === '') {
+															return item;
+														} else if (
+															item.barcode?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+															item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+															item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+															item.category?.toLowerCase().includes(searchTerm.toLowerCase())
+														) {
+															return item;
+														}
+														return false;
+													})
+													.map((item, index) => (
+														<React.Fragment key={index}>
+															<tr style={{ cursor: 'pointer' }}>
+																<td>{item.id}</td>
+																<td onClick={() => toggleRow(index)}>
+																	{item.date}
+																</td>
+																<td onClick={() => toggleRow(index)}>
+																	{item.barcode}
+																</td>
+																<td onClick={() => toggleRow(index)}>
+																	<span className={`badge ${item.condition === 'Good' ? 'bg-success' : 'bg-danger'}`}>
+																		{item.condition}
+																	</span>
+																</td>
+																<td onClick={() => toggleRow(index)}>
+																	{item.category}
+																</td>
+																<td onClick={() => toggleRow(index)}>
+																	{item.brand}
+																</td>
+																<td onClick={() => toggleRow(index)}>
+																	{item.model}
+																</td>
+															</tr>
+														</React.Fragment>
+													))}
+												{filteredOrders.length === 0 && (
+													<tr>
+														<td colSpan={7} className="text-center">
+															No returns found. {searchDate && "Try a different date or clear the date filter."}
+														</td>
+													</tr>
+												)}
+											</tbody>
+										</table>
+									)}
 								</CardBody>
 							</Card>
 						</div>

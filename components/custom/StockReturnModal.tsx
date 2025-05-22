@@ -18,8 +18,7 @@ import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutDissApiSlic
 import Select from '../bootstrap/forms/Select';
 import Checks, { ChecksGroup } from '../bootstrap/forms/Checks';
 import { saveReturnData1, updateQuantity1 } from '../../service/returnAccesory';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 interface StockAddModalProps {
 	id: string;
@@ -46,7 +45,7 @@ interface StockIn {
 	printlable: number;
 }
 
-const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity }) => {
+const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity }) => {
 	const [stockIn, setStockIn] = useState<StockIn>({
 		cid: '',
 		brand: '',
@@ -65,43 +64,31 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		printlable: 0,
 	});
 	const { data: itemDiss } = useGetItemDissQuery(undefined);
-	// const { data: StockInOuts } = useGetStockInOutsQuery(undefined);
 	const { refetch } = useGetItemDissQuery(undefined);
 	const [updateSubStockInOut] = useUpdateSubStockInOutMutation();
 	const [condition, setCondition] = useState('');
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	 const getStockInsById = async (subStockId: string) => {
+	// Function to get stock item details from Supabase
+	const getStockItemByBarcode = async (barcode: string) => {
 		try {
-		  const stockCollectionRef = collection(firestore, 'Stock');
-		  const q = query(stockCollectionRef, where('barcode', '==', subStockId));
-		  const querySnapshot = await getDocs(q);
-		  const matchingStocks = [];
-		  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-	// 	  for (const stockDoc of querySnapshot.docs) {
-	// 		const stockDocId = stockDoc.id;
-			
-	// 		const stockInfo: any = { id: stockDocId, ...stockDoc.data() };
-			
-	// 		// Get the specific subStock document by ID
-	// 		const subStockDocRef = doc(firestore, 'Stock', subStockId, 'subStock', subStockId);
-	// 		const subStockDoc = await getDoc(subStockDocRef);
-	// 		console.log(subStockDoc.data());
-	// 		if (subStockDoc.exists()) {
-	// 		  // If the subStock with the specified ID exists in this stock document
-	// 		  stockInfo.subStock = [{
-	// 			id: subStockDoc.id,
-	// 			...subStockDoc.data()
-	// 		  }];
-	// 		  matchingStocks.push(stockInfo);
-	// 		}
-	// 	  }
-	//   console.log(matchingStocks);
-	// 	  return matchingStocks;
+			const { data, error } = await supabase
+				.from('StockDis')
+				.select('*')
+				.eq('barcode', barcode)
+				.single();
+
+			if (error) {
+				console.error('Error fetching stock item:', error);
+				return null;
+			}
+
+			return data;
 		} catch (error) {
-		  console.error('Error fetching stock with specific subStock ID:', error);
-		  throw new Error(`Failed to fetch stock with subStock ID: ${subStockId}`);
+			console.error('Error in getStockItemByBarcode:', error);
+			return null;
 		}
-	  };
+	};
 
 	const formik = useFormik({
 		initialValues: {
@@ -116,96 +103,123 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			} = {};
 
 			if (!values.itemId) {
-				errors.itemId = 'Id is required';
+				errors.itemId = 'Barcode/Item ID is required';
 			}
-			if (!values.condition) {
-				errors.condition = 'Id is required';
+			if (!condition) {
+				errors.condition = 'Condition is required';
 			}
 			return errors;
 		},
-		onSubmit: async (value) => {
+		onSubmit: async (values) => {
 			try {
-				const process = Swal.fire({
+				setIsSubmitting(true);
+				// Show processing message
+				Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
 					allowOutsideClick: false,
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
-				try {
-			
 
-					const id = value.itemId?.toString().slice(0, 8) || 'defaultId';
-					const subid = value.itemId.toString();
-
-					const prefix1 = value.itemId?.toString().slice(0, 8);
-
-					// const matchedItem = StockInOuts.find(
-					// 	(item: {
-					// 		id: string;
-					// 	}) => item.id.startsWith(prefix1),
-					// );
-					console.log(subid);
-					const matchedItem:any = await getStockInsById(id);
-					console.log(matchedItem);
-					if (matchedItem == undefined) {
-						await Swal.fire({
-							icon: 'error',
-							title: 'Error',
-							text: 'Failed to add the item. Please try again.',
-						});
-						return;
-					}
-					const now = new Date();
-					const month = now.toLocaleString('default', { month: 'short' }); // e.g., "Feb"
-					const day = now.getDate(); // e.g., 17
-					const year = now.getFullYear(); // e.g., 2025
-
-					const formattedDate = `${month} ${day} ${year}`;
-					console.log(formattedDate); // "Feb 17 2025"
-					const updatedItem = {
-						condition,
-						barcode: value.itemId,
-						brand: matchedItem[0].brand,
-						category: matchedItem[0].category,
-						model: matchedItem[0].model,
-						date: formattedDate,
-					};
-
-					const data = await saveReturnData1(updatedItem);
-
-					if (condition === 'Good' && data) {
-						const values = {
-							status: false,
-						};
-						const prefix = value.itemId?.toString().slice(0, 4);
-						const matchedItem = itemDiss.find(
-							(item: { code: string; quantity: string }) =>
-								item.code.startsWith(prefix),
-						);
-						if (matchedItem) {
-							await updateQuantity1(matchedItem.id, Number(matchedItem.quantity) + 1);
-						}
-						await updateSubStockInOut({ id, subid, values }).unwrap();
-					}
-					refetch();
-					await Swal.fire({
-						icon: 'success',
-						title: 'Stock In Created Successfully',
+				// Get the barcode from form
+				const barcode = values.itemId?.toString();
+				
+				// Get stock item details
+				const stockItem = await getStockItemByBarcode(barcode);
+				
+				if (!stockItem) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Item Not Found',
+						text: `Could not find item with barcode: ${barcode}`,
 					});
-					formik.resetForm();
-					setIsOpen(false);
-				} catch (error) {
-					console.log(error);
-					await Swal.fire({
+					setIsSubmitting(false);
+					return;
+				}
+
+				// Format current date
+				const now = new Date();
+				const month = now.toLocaleString('default', { month: 'short' });
+				const day = now.getDate();
+				const year = now.getFullYear();
+				const formattedDate = `${month} ${day} ${year}`;
+
+				// Prepare data for saving to returnDisplay table
+				const returnData = {
+					barcode: values.itemId,
+					brand: stockItem.brand || '',
+					category: stockItem.category || '',
+					model: stockItem.model || '',
+					condition: condition,
+					date: formattedDate,
+				};
+
+				// Save return data to Supabase using the service
+				const success = await saveReturnData1(returnData);
+
+				if (!success) {
+					Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to add the item. Please try again.',
+						text: 'Failed to save return data to database.',
 					});
+					setIsSubmitting(false);
+					return;
 				}
+
+				// Update item quantity if condition is 'Good'
+				if (condition === 'Good') {
+					// Find the matching item in the inventory
+					const prefix = values.itemId?.toString().slice(0, 4);
+					const matchedItem = itemDiss?.find(
+						(item: { code: string; quantity: string }) =>
+							item.code.startsWith(prefix)
+					);
+
+					if (matchedItem) {
+						// Update quantity (increase by 1)
+						await updateQuantity1(matchedItem.id, Number(matchedItem.quantity) + 1);
+					}
+
+					// Update the stock item status
+					try {
+						const { error } = await supabase
+							.from('StockDis')
+							.update({ status: false })
+							.eq('barcode', barcode);
+
+						if (error) {
+							console.error('Error updating stock item status:', error);
+						}
+					} catch (updateError) {
+						console.error('Error in update operation:', updateError);
+					}
+				}
+
+				// Refresh the items data
+				refetch();
+				
+				// Show success message
+				Swal.fire({
+					icon: 'success',
+					title: 'Return Processed Successfully',
+					text: `Item has been returned with condition: ${condition}`,
+				});
+
+				// Reset form
+				formik.resetForm();
+				setCondition('');
+				setIsSubmitting(false);
+				setIsOpen(false);
 			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				alert('An error occurred during the process. Please try again later.');
+				console.error('Error processing return:', error);
+				Swal.fire({
+					icon: 'error',
+					title: 'Error',
+					text: 'An unexpected error occurred. Please try again.',
+				});
+				setIsSubmitting(false);
 			}
 		},
 	});
@@ -216,16 +230,17 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				setIsOpen={() => {
 					setIsOpen(false);
 					formik.resetForm();
+					setCondition('');
 				}}
 				className='p-4'>
 				<ModalTitle id=''>{'Return Stock'}</ModalTitle>
 			</ModalHeader>
 			<ModalBody className='px-4'>
 				<div className='row g-4 mt-2'>
-					<FormGroup id='itemId' label='Item Id' className='col-md-6'>
+					<FormGroup id='itemId' label='Item Barcode/ID' className='col-md-6'>
 						<Input
-							type='number'
-							placeholder='Enter Item Id'
+							type='text'
+							placeholder='Enter Item Barcode/ID'
 							value={formik.values.itemId}
 							onChange={formik.handleChange}
 							onBlur={formik.handleBlur}
@@ -250,7 +265,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 									setCondition(e.target.value);
 									formik.setFieldValue('condition', e.target.value);
 								}}
-								checked={condition == 'Good'}
+								checked={condition === 'Good'}
 							/>
 							<Checks
 								id='Bad'
@@ -258,27 +273,28 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 								name='Bad'
 								value='Bad'
 								onChange={(e: any) => {
-									setCondition(e.target.value),
-										formik.setFieldValue('condition', e.target.value);
+									setCondition(e.target.value);
+									formik.setFieldValue('condition', e.target.value);
 								}}
-								checked={condition == 'Bad'}
+								checked={condition === 'Bad'}
 							/>
 						</ChecksGroup>
 					</FormGroup>
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>
-				<Button color='success' onClick={formik.handleSubmit}>
-					Stock In
+				<Button color='success' onClick={formik.handleSubmit} isDisable={isSubmitting}>
+					{isSubmitting ? 'Processing...' : 'Process Return'}
 				</Button>
 			</ModalFooter>
 		</Modal>
 	);
 };
-StockAddModal.propTypes = {
+
+StockReturnModal.propTypes = {
 	id: PropTypes.string.isRequired,
 	isOpen: PropTypes.bool.isRequired,
 	setIsOpen: PropTypes.func.isRequired,
 };
 
-export default StockAddModal;
+export default StockReturnModal;

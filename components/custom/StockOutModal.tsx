@@ -46,7 +46,6 @@ interface StockOut {
 	name: string;
 	mobile: string;
 	nic: string;
-	email: string;
 	barcode: string;
 	cost: string;
 	sellingPrice: string;
@@ -66,7 +65,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		name: '',
 		mobile: '',
 		nic: '',
-		email: '',
 		barcode: '',
 		cost: '',
 		sellingPrice: '',
@@ -115,7 +113,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			name: '',
 			mobile: '',
 			nic: '',
-			email: '',
 			barcode: '',
 			cost: '',
 			sellingPrice: '',
@@ -126,34 +123,46 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		enableReinitialize: true,
 		validate: (values) => {
 			const errors: any = {};
-			if (!values.quantity) errors.quantity = 'Quantity is required';
+			if (!values.quantity || values.quantity === '') {
+				errors.quantity = 'Quantity is required';
+			} else if (isNaN(Number(values.quantity)) || Number(values.quantity) <= 0) {
+				errors.quantity = 'Quantity must be a positive number';
+			}
+			
 			if (!values.date) errors.date = 'Date Out is required';
 			if (!values.barcode) errors.barcode = 'Date In is required';
-			if (!values.sellingPrice) errors.sellingPrice = 'Selling Price is required';
-			// if (!values.customerName) errors.customerName = 'Customer Name is required';
-			// if (!values.mobile) {
-			// 	errors.mobile = 'Required';
-			// } else if (values.mobile.length !== 10) {
-			// 	errors.mobile = 'Mobile number must be exactly 10 digits';
-			// }
-			// if (!values.nic) {
-			// 	errors.nic = 'Required';
-			// } else if (!/^\d{9}[Vv]$/.test(values.nic) && !/^\d{12}$/.test(values.nic)) {
-			// 	errors.nic = 'NIC must be 9 digits followed by "V" or 12 digits';
-			// }
-			// if (!values.email) {
-			// 	errors.email = 'Required';
-			// } else if (!values.email.includes('@')) {
-			// 	errors.email = 'Invalid email format.';
-			// } else if (values.email.includes(' ')) {
-			// 	errors.email = 'Email should not contain spaces.';
-			// } else if (/[A-Z]/.test(values.email)) {
-			// 	errors.email = 'Email should be in lowercase only.';
-			// }
+			
+			if (!values.sellingPrice || values.sellingPrice === '') {
+				errors.sellingPrice = 'Selling Price is required';
+			} else if (isNaN(Number(values.sellingPrice)) || Number(values.sellingPrice) < 0) {
+				errors.sellingPrice = 'Selling Price must be a non-negative number';
+			}
+			
 			return errors;
 		},
 		onSubmit: async (values) => {
 			try {
+				// Check if current stock is zero
+				if (stockInQuantity <= 0) {
+					Swal.fire({
+						icon: 'error',
+						title: 'No Stock Available',
+						text: 'Current stock is 0. Stock out operation cannot be performed.',
+					});
+					return;
+				}
+				
+				// Check if requested quantity exceeds available stock
+				const stockOutQuantity = values.quantity ? parseInt(values.quantity) : 0;
+				if (stockOutQuantity > stockInQuantity) {
+					Swal.fire({
+						icon: 'error',
+						title: 'Insufficient Stock',
+						text: `Requested quantity (${stockOutQuantity}) exceeds available stock (${stockInQuantity}).`,
+					});
+					return;
+				}
+			
 				Swal.fire({
 					title: 'Processing...',
 					html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
@@ -164,7 +173,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				await refetch();
 				
 				// Validate and convert numeric values
-				const stockOutQuantity = values.quantity ? parseInt(values.quantity) : 0;
 				if (isNaN(stockInQuantity) || isNaN(stockOutQuantity)) {
 					Swal.fire({
 						icon: 'error',
@@ -195,15 +203,16 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				}
 				
 				// Clone values and ensure numeric fields are properly formatted
-				const processedValues:any = {...values};
-				processedValues.quantity = stockOutQuantity;
-				processedValues.sellingPrice = Number(values.sellingPrice);
-				if (values.cost) processedValues.cost = Number(values.cost);
+				const processedValues = {
+					...values,
+					quantity: Number(values.quantity),
+					sellingPrice: Number(values.sellingPrice),
+					cost: values.cost ? Number(values.cost) : null,
+					stock: 'stockOut',
+					status: true
+				};
 				
-				// Make sure stock is set to 'stockOut' explicitly - VERY IMPORTANT
-				processedValues.stock = 'stockOut';
-				
-				console.log("Submitting stock-out with explicit stock value:", processedValues.stock);
+				console.log("Submitting stock-out with values:", processedValues);
 				
 				const response = await addstockOut(processedValues).unwrap();
 				console.log("Stock-out created response:", response);
