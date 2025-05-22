@@ -324,12 +324,20 @@ const Index: NextPage = () => {
 																icon='CallMissedOutgoing'
 																tag='a'
 																color='warning'
-																onClick={() => (
-																	refetch(),
-																	setEditstockModalStatus(true),
-																	setId(itemAcces.id),
-																	setQuantity(itemAcces.quantity)
-																)}></Button>
+																onClick={() => {
+																	if (itemAcces.quantity <= 0) {
+																		Swal.fire({
+																			icon: 'error',
+																			title: 'No Stock Available',
+																			text: 'Current stock is 0. Stock out operation cannot be performed.',
+																		});
+																		return;
+																	}
+																	refetch();
+																	setEditstockModalStatus(true);
+																	setId(itemAcces.id);
+																	setQuantity(itemAcces.quantity);
+																}}></Button>
 														</td>
 														<td>
 															<Button

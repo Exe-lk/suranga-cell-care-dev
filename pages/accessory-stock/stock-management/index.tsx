@@ -25,15 +25,18 @@ const Index: NextPage = () => {
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedDate, setSelectedDate] = useState('');
 	const today = new Date();
-	const [startDate, setStartDate] = useState<string>(today.toISOString().split('T')[0]);
+	const [startDate, setStartDate] = useState<string>('');
 	// Use our new query to get ALL records without date filtering
 	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
 
-	// Initialize with both stock types selected
-	const stock = [{ stock: 'stockOut' }, { stock: 'stockIn' }];
-	// Show all stock types by default
+	// Define stock types for filtering
+	const stock = [
+		{ stock: 'stockIn', label: 'Stock In' }, 
+		{ stock: 'stockOut', label: 'Stock Out' }
+	];
+	// Start with both stock types selected
 	const [selectedUsers, setSelectedUsers] = useState<string[]>(['stockIn', 'stockOut']);
 
 	// Debug stock types
@@ -43,7 +46,9 @@ const Index: NextPage = () => {
 			const stockTypes = StockInOuts.map((item: any) => item.stock).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
 			console.log("Stock types in data:", stockTypes);
 			const stockOutCount = StockInOuts.filter((item: any) => item.stock === 'stockOut').length;
+			const stockInCount = StockInOuts.filter((item: any) => item.stock === 'stockIn').length;
 			console.log("Stock-out records count:", stockOutCount);
+			console.log("Stock-in records count:", stockInCount);
 		}
 	}, [StockInOuts]);
 
@@ -54,7 +59,7 @@ const Index: NextPage = () => {
 	// Simplified filtering logic that applies date filtering in the frontend
 	const filteredTransactions = StockInOuts?.filter((trans: any) => {
 		// Apply date filtering only if we have a valid date to filter by
-		if (startDate) {
+		if (startDate && startDate.trim() !== '') {
 			const transactionDate = trans.date ? new Date(trans.date) : null;
 			const start = startDate ? new Date(startDate) : null;
 			
@@ -287,21 +292,21 @@ const Index: NextPage = () => {
 							<div className='container py-2'>
 								<div className='row g-3'>
 									<ChecksGroup>
-										{stock.map((brand, index) => (
+										{stock.map((stockItem, index) => (
 											<Checks
-												key={brand.stock}
-												id={brand.stock}
-												label={brand.stock}
-												name={brand.stock}
-												value={brand.stock}
-												checked={selectedUsers.includes(brand.stock)}
+												key={stockItem.stock}
+												id={stockItem.stock}
+												label={stockItem.label}
+												name={stockItem.stock}
+												value={stockItem.stock}
+												checked={selectedUsers.includes(stockItem.stock)}
 												onChange={(event: any) => {
 													const { checked, value } = event.target;
 													setSelectedUsers((prevUsers) =>
 														checked
 															? [...prevUsers, value]
 															: prevUsers.filter(
-																	(brand) => brand !== value,
+																	(type) => type !== value,
 															  ),
 													);
 												}}
@@ -315,13 +320,22 @@ const Index: NextPage = () => {
 											value={startDate}
 										/>
 									</FormGroup>
-									{/* <FormGroup label='End Date' className='col-6'>
-										<Input
-											type='date'
-											onChange={(e: any) => setEndDate(e.target.value)}
-											value={endDate}
-										/>
-									</FormGroup> */}
+									<div className='col-12 mt-3'>
+										<Button 
+											color='info' 
+											className='w-100'
+											onClick={() => {
+												setSelectedUsers(['stockIn', 'stockOut']);
+												setStartDate('');
+												setSearchTerm('');
+												if (inputRef.current) {
+													inputRef.current.value = '';
+												}
+											}}
+										>
+											Clear All Filters
+										</Button>
+									</div>
 								</div>
 							</div>
 						</DropdownMenu>
@@ -385,41 +399,46 @@ const Index: NextPage = () => {
 											</tr>
 										)}
 										{filteredTransactions &&
-											dataPagination(
-												filteredTransactions,
-												currentPage,
-												perPage,
-											)
-												.filter(
-													(StockInOut: any) => {
-														console.log("Stock record status:", StockInOut.id, StockInOut.status);
-														return StockInOut.status === true;
-													},
-												)
-												.filter((brand: any) => {
+											(() => {
+												const activeRecords = filteredTransactions.filter((s: { status: boolean }) => s.status === true);
+												
+												// Apply stock type filtering
+												const stockFilteredRecords = activeRecords.filter((item: any) => {
+													if (selectedUsers.length === 0) return true;
+													return selectedUsers.includes(item.stock);
+												});
+												
+												// Apply search term filtering
+												const searchFilteredRecords = stockFilteredRecords.filter((brand: any) => {
+													if (!searchTerm) return true;
+													
 													const search = searchTerm.toLowerCase();
 													return (
 														brand.barcode?.toString().toLowerCase().includes(search) ||
 														brand.brand?.toLowerCase().includes(search) ||
-														brand.model?.toLowerCase().includes(search)||
+														brand.model?.toLowerCase().includes(search) ||
 														(brand.brand + ' ' + brand.model)?.toLowerCase().includes(search) ||
 														(brand.category+" "+brand.brand+" "+brand.model)?.toLowerCase().includes(search) ||
 														(brand.category+" "+brand.model+" "+brand.brand)?.toLowerCase().includes(search) ||
 														brand.category?.toLowerCase().includes(search) ||
 														brand.stock?.toLowerCase().includes(search)
 													);
-												})
-												.filter((brand: any) => {
-													if (selectedUsers.length > 0) {
-														console.log("Filtering by stock type:", brand.id, brand.stock, "Included:", selectedUsers.includes(brand.stock));
-													}
-													return selectedUsers.length > 0 ? selectedUsers.includes(brand.stock) : true;
-												})
-												.sort((a: any, b: any) => {
+												});
+												
+												// Sort records by date (newest first)
+												const sortedRecords = searchFilteredRecords.sort((a: any, b: any) => {
 													const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
 													const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
 													return dateB - dateA;
-												})
+												});
+												
+												// Paginate the records
+												return dataPagination(
+													sortedRecords,
+													currentPage,
+													perPage,
+												);
+											})()
 												.map((brand: any, index: any) => {
 													const formattedTimestamp = brand.created_at 
 														? new Date(brand.created_at).toLocaleString() 
@@ -439,6 +458,39 @@ const Index: NextPage = () => {
 														</tr>
 													);
 												})}
+										{filteredTransactions && 
+										 filteredTransactions.filter((s: { status: boolean }) => s.status === true)
+										 .filter((item: any) => selectedUsers.length === 0 || selectedUsers.includes(item.stock))
+										 .filter((brand: any) => {
+											if (!searchTerm) return true;
+											const search = searchTerm.toLowerCase();
+											return (
+												brand.barcode?.toString().toLowerCase().includes(search) ||
+												brand.brand?.toLowerCase().includes(search) ||
+												brand.model?.toLowerCase().includes(search) ||
+												(brand.brand + ' ' + brand.model)?.toLowerCase().includes(search) ||
+												(brand.category+" "+brand.brand+" "+brand.model)?.toLowerCase().includes(search) ||
+												(brand.category+" "+brand.model+" "+brand.brand)?.toLowerCase().includes(search) ||
+												brand.category?.toLowerCase().includes(search) ||
+												brand.stock?.toLowerCase().includes(search)
+											);
+										 }).length === 0 && (
+											<tr>
+												<td colSpan={9} className="text-center py-4">
+													No matching records found. 
+													{selectedUsers.length > 0 && (
+														<span> Current filters: <strong>{selectedUsers.join(', ')}</strong></span>
+													)}
+													{startDate && (
+														<span> From date: <strong>{startDate}</strong></span>
+													)}
+													{searchTerm && (
+														<span> Search: <strong>"{searchTerm}"</strong></span>
+													)}
+													<div className="mt-2">Try adjusting your filters or clearing the date filter.</div>
+												</td>
+											</tr>
+										)}
 									</tbody>
 								</table>
 							</CardBody>
