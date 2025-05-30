@@ -76,7 +76,7 @@ const Index: NextPage = () => {
 		if (inputRef.current) {
 			inputRef.current.focus();
 		}
-	}, [users]);
+	}, [users, error]);
 
 	const handleClickDelete = async (user: any) => {
 		if (user.role === 'admin') {
