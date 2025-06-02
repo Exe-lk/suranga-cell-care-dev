@@ -100,16 +100,15 @@ export const updatestockIn = async (id: string, quantity: string) => {
   }
 };
 
-// Create Stock Out Entry (directly inserted into StockAcce)
+
 export const createstockOut = async (values: any) => {
   console.log("Creating stock out with original values:", values);
   
-  // Simplified version with just what we need
+
   const processedValues = {
     ...values,
     status: true,
     created_at: new Date(),
-    // Force stock to be stockOut
     stock: 'stockOut'
   };
   
@@ -134,7 +133,6 @@ export const createstockOut = async (values: any) => {
   return data?.[0]?.id;
 };
 
-// Mark Stock as Deleted (status = false)
 export const createstockDelete = async (values: any) => {
   const status = false;
   const created_at = new Date();
@@ -156,13 +154,11 @@ export const createstockDelete = async (values: any) => {
 export const getstockInByDate = async (date: string) => {
   console.log("Fetching stock with date:", date);
   
-  // Only filter by date if date is provided
   const query = supabase
     .from('StockAcce')
     .select('*')
     .eq('status', true);
   
-  // Apply date filter only if a valid date is provided
   if (date && date !== 'undefined' && date !== 'null') {
     query.eq('date', date);
   }
@@ -180,7 +176,6 @@ export const getstockInByDate = async (date: string) => {
   return data;
 };
 
-// Get ALL Stock Records (for transactions page)
 export const getAllStockRecords = async () => {
   console.log("Fetching ALL stock records without date filtering");
   
