@@ -30,7 +30,8 @@ import PaginationButtons, {
 	dataPagination,
 	PER_COUNT,
 } from '../../../components/PaginationButtons';
-import Accessory from '../../../components/displatbill';
+import RepairedPhoneBill from '../../../components/repairedPhoneBill';
+import CostEditModal from '../../../components/custom/CostEditModal';
 
 
 const Index: NextPage = () => {
@@ -50,6 +51,8 @@ const Index: NextPage = () => {
 	const [endDate, setEndDate] = useState<string>('');
 	const [formStatus, setFormStatus] = useState<boolean>(false);
 	const [data, setData] = useState<any[]>([]);
+	const [costEditModalStatus, setCostEditModalStatus] = useState<boolean>(false);
+	const [selectedBillForCostEdit, setSelectedBillForCostEdit] = useState<any>(null);
 	const filteredTransactions = bills?.filter((trans: any) => {
 		const transactionDate = new Date(trans.dateIn);
 		const start = startDate ? new Date(startDate) : null;
@@ -64,15 +67,36 @@ const Index: NextPage = () => {
 		return true;
 	});
 
-	const handleStatusChange = async (id: string, newStatus: string) => {
+	const handleStatusChange = async (billNumber: string, newStatus: string) => {
+		// Prevent update if no status is selected
+		if (!newStatus || newStatus === '') {
+			Swal.fire('Warning', 'Please select a valid status', 'warning');
+			return;
+		}
+
 		try {
-			await updateRepairedPhone({ id, Status: newStatus }).unwrap();
-			refetch();
+			console.log('Updating status for Bill Number:', billNumber, 'to status:', newStatus);
+			const result = await updateRepairedPhone({ id: billNumber, Status: newStatus }).unwrap();
+			console.log('Update result:', result);
+			
+			// Force refetch to ensure UI updates
+			await refetch();
+			
 			Swal.fire('Success', 'Status updated successfully', 'success');
 		} catch (error) {
 			console.error('Error updating status: ', error);
-			Swal.fire('Error', 'Failed to update status', 'error');
+			Swal.fire('Error', 'Failed to update status. Please try again.', 'error');
 		}
+	};
+
+	const handleCostUpdate = async (id: string, updatedData: any) => {
+		// Refresh the data after cost update
+		refetch();
+	};
+
+	const openCostEditModal = (bill: any) => {
+		setSelectedBillForCostEdit(bill);
+		setCostEditModalStatus(true);
 	};
 	
 	const handleExport = async (format: string) => {
@@ -323,7 +347,7 @@ const Index: NextPage = () => {
 	return (
 		<PageWrapper>
 			{formStatus ? (
-					<Accessory setIsOpen={setFormStatus} isOpen={formStatus} data={data} />
+					<RepairedPhoneBill setIsOpen={setFormStatus} isOpen={formStatus} data={data} />
 				) : (<>
 			<SubHeader>
 				<SubHeaderLeft>
@@ -415,9 +439,9 @@ const Index: NextPage = () => {
 											<th>Bill No.</th>
 											<th>Phone Model</th>
 											<th>Contact No.</th>
-											<th>Price</th>
 											<th>Status</th>
 											<th>Change Status</th>
+											<th>Actions</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -446,20 +470,20 @@ const Index: NextPage = () => {
 														<td>{bill.billNumber}</td>
 														<td>{bill.phoneModel}</td>
 														<td>{bill.phoneDetail}</td>
-														<td>{bill.Price}</td>
 														<td>{bill.Status}</td>
 														<td>
 															{bill.Status !== 'HandOver' && (
 																<FormGroup className='col-md-6'>
 																	<Select
+																		value={bill.Status || ''}
 																		onChange={(e: any) =>
 																			handleStatusChange(
-																				bill.id,
+																				bill.billNumber,
 																				e.target.value,
 																			)
 																		}
 																		ariaLabel={''}>
-																		<Option>
+																		<Option value=''>
 																			Select the status
 																		</Option>
 																		<Option value='HandOver'>
@@ -470,17 +494,25 @@ const Index: NextPage = () => {
 															)}
 														</td>
 														<td>
-														<td>
-																		<Button
-																			icon='Print'
-																			color='success'
-																			onClick={() => {
-																				setFormStatus(true),
-																					setData(bill);
-																			}}>
-																			Print
-																		</Button>
-																	</td>
+															<Button
+																icon='MonetizationOn'
+																color='info'
+																size='sm'
+																className='me-2'
+																onClick={() => openCostEditModal(bill)}
+																title='Edit Costs'>
+																Edit Costs
+															</Button>
+															<Button
+																icon='Print'
+																color='success'
+																size='sm'
+																onClick={() => {
+																	setFormStatus(true),
+																		setData(bill);
+																}}>
+																Print
+															</Button>
 														</td>
 													</tr>
 												))}
@@ -500,6 +532,15 @@ const Index: NextPage = () => {
 				</div>
 			</Page>
 			</>)}
+			
+			{/* Cost Edit Modal */}
+			<CostEditModal
+				id={selectedBillForCostEdit?.billNumber || ''}
+				isOpen={costEditModalStatus}
+				setIsOpen={setCostEditModalStatus}
+				billData={selectedBillForCostEdit}
+				onUpdate={handleCostUpdate}
+			/>
 		</PageWrapper>
 	);
 };

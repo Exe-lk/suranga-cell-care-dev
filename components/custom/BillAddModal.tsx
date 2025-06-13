@@ -353,7 +353,7 @@ const BillAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }) => 
 						)}
 						</>
 					</FormGroup>
-					{/* <FormGroup id='technicianNum' label='Technician No' className='col-md-6'>
+					 <FormGroup id='technicianNum' label='Technician No' className='col-md-6'>
 						<Select
 							ariaLabel='Select Technician'
 							placeholder='Select a Technician'
@@ -374,7 +374,7 @@ const BillAddModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }) => 
 						</Select>
 						{techniciansLoading ? <p>Loading technicians...</p> : <></>}
 						{isError ? <p>Error loading technicians. Please try again.</p> : <></>}
-					</FormGroup> */}
+					</FormGroup> 
 					<FormGroup id='CustomerName' label='Customer Name' className='col-md-6'>
 						<Input
 							onChange={formik.handleChange}

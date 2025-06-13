@@ -91,7 +91,7 @@ const Index: NextPage = () => {
 					NIC: bill.NIC,
 					componentCost: bill.componentCost,
 					repairCost: bill.repairCost,
-					cost: bill.cost,
+					totalCost: bill.totalCost,
 					Price: bill.Price,
 					Status: bill.Status,
 					DateOut: bill.DateOut,
@@ -363,28 +363,276 @@ const Index: NextPage = () => {
 	};
 
 	const statuschange = async (id:any,value:any) => {
-		const result = await Swal.fire({
-			title: 'Are you sure?',
-			icon: 'warning',
-			showCancelButton: true,
-			confirmButtonColor: '#3085d6',
-			cancelButtonColor: '#d33',
-			confirmButtonText: 'Yes, Update it!',
+		const response = await fetch(`/api/bill/${id}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				Status: value,
+			}),
 		});
-		if (result.isConfirmed) {
-			try {
-				const billRef = doc(firestore, "bill", id);
-				await updateDoc(billRef, { Status: value });
-		  
-				Swal.fire("Updated!", "The status has been updated.", "success");
-				refetch(); // Ensure refetch is defined and available in your context
-			  } catch (error) {
-				Swal.fire("Error!", "Failed to update status.", "error");
-				console.error("Error updating document:", error);
-			  }
-		}
 
+		if (response.ok) {
+			console.log('Bill status updated successfully');
+			// Update the local state or refetch data
+			refetch();
+		} else {
+			console.error('Failed to update bill status');
+		}
 	};
+
+	const handlePrintBill = (bill: any) => {
+		const printWindow = window.open('', '_blank');
+		if (!printWindow) return;
+
+		const currentDate = new Date().toLocaleDateString();
+		
+		const printContent = `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<title>Bill - ${bill.billNumber}</title>
+				<style>
+					* {
+						margin: 0;
+						padding: 0;
+						box-sizing: border-box;
+					}
+					body {
+						font-family: 'Arial', sans-serif;
+						background: white;
+						margin: 0;
+						padding: 20px;
+					}
+					.bill-container {
+						width: 130mm;
+						height: auto;
+						background: #fff;
+						border: 1px dashed #ccc;
+						padding: 20px;
+						font-family: Arial, sans-serif;
+						font-size: 12px;
+						color: black;
+						margin: 0 auto;
+					}
+					.header h1 {
+						font-size: 29px;
+						font-family: initial;
+						color: black;
+						margin-bottom: 2px;
+					}
+					.header p {
+						margin-bottom: 2px;
+						color: black;
+						font-size: 12px;
+					}
+					.divider {
+						margin: 5px 0;
+						display: block;
+						border-top: 1px solid black;
+						color: black;
+					}
+					.bill-details {
+						margin-bottom: 5px;
+						line-height: 1.2;
+					}
+					.bill-details table {
+						width: 100%;
+						border-collapse: collapse;
+					}
+					.bill-details td {
+						color: black;
+						padding: 2px 0;
+						font-size: 12px;
+					}
+					.section-title {
+						color: black;
+						font-size: 12px;
+						margin: 8px 0 3px 0;
+						font-weight: bold;
+					}
+					.item-row {
+						color: black;
+						padding: 3px 0;
+						border-bottom: 1px dotted #ccc;
+						font-size: 11px;
+					}
+					.item-label {
+						font-weight: bold;
+						display: inline-block;
+						width: 40%;
+					}
+					.item-value {
+						display: inline-block;
+						width: 58%;
+					}
+					.cost-section {
+						margin-top: 10px;
+						padding-top: 5px;
+						border-top: 1px solid black;
+					}
+					.cost-row {
+						display: flex;
+						justify-content: space-between;
+						padding: 2px 0;
+						font-size: 12px;
+					}
+					.total-row {
+						display: flex;
+						justify-content: space-between;
+						padding: 5px 0;
+						font-size: 14px;
+						font-weight: bold;
+						border-top: 1px solid black;
+						margin-top: 5px;
+					}
+					.status-section {
+						text-align: center;
+						margin: 10px 0;
+						padding: 5px;
+						background: #f0f0f0;
+						border-radius: 3px;
+					}
+					.footer {
+						text-align: center;
+						font-size: 12px;
+						color: black;
+						margin-top: 10px;
+						border-top: 1px solid black;
+						padding-top: 5px;
+					}
+					.footer-small {
+						text-align: right;
+						font-size: 10px;
+						color: black;
+						margin-top: 5px;
+					}
+					@media print {
+						body { 
+							margin: 0; 
+							padding: 0;
+						}
+						.bill-container { 
+							margin: 0;
+							border: none;
+						}
+					}
+				</style>
+			</head>
+			<body>
+				<div class="bill-container">
+					<!-- Header -->
+					<div class="header text-left">
+						<h1>Suranga Cell Care</h1>
+						<p>No. 524/1A, Kandy Road, Kadawatha.</p>
+						<p>Tel: +94 11 292 60 30 | Mobile: +94 76 401 77 28</p>
+					</div>
+					
+					<span class="divider"></span>
+					
+					<!-- Bill Details -->
+					<div class="bill-details">
+						<table>
+							<tr>
+								<td style="width: 50%;">Bill No: ${bill.billNumber}</td>
+								<td>Date: ${bill.dateIn}</td>
+							</tr>
+							<tr>
+								<td>Customer: ${bill.CustomerName}</td>
+								<td>Print: ${currentDate}</td>
+							</tr>
+							<tr>
+								<td>Mobile: ${bill.CustomerMobileNum}</td>
+								<td>Tech: ${bill.technicianNum}</td>
+							</tr>
+						</table>
+					</div>
+					
+					<span class="divider"></span>
+					
+					<!-- Device Information -->
+					<div class="section-title">DEVICE INFORMATION</div>
+					<div class="item-row">
+						<span class="item-label">Model:</span>
+						<span class="item-value">${bill.phoneModel}</span>
+					</div>
+					<div class="item-row">
+						<span class="item-label">Details:</span>
+						<span class="item-value">${bill.phoneDetail}</span>
+					</div>
+					<div class="item-row">
+						<span class="item-label">Repair Type:</span>
+						<span class="item-value">${bill.repairType}</span>
+					</div>
+					
+					<span class="divider"></span>
+					
+					<!-- Cost Breakdown -->
+					<div class="section-title">COST BREAKDOWN</div>
+					<div class="cost-section">
+						<div class="cost-row">
+							<span>Component Cost:</span>
+							<span>Rs. ${bill.componentCost || '0.00'}</span>
+						</div>
+						<div class="cost-row">
+							<span>Repair Cost:</span>
+							<span>Rs. ${bill.repairCost || '0.00'}</span>
+						</div>
+						<div class="total-row">
+							<span>TOTAL AMOUNT:</span>
+							<span>Rs. ${bill.cost || bill.totalCost || '0.00'}</span>
+						</div>
+					</div>
+					
+					<!-- Status -->
+					<div class="status-section">
+						<strong>Status: ${bill.Status}</strong>
+					</div>
+					
+					<!-- Customer Info -->
+					<div class="section-title">CUSTOMER DETAILS</div>
+					<div class="item-row">
+						<span class="item-label">NIC:</span>
+						<span class="item-value">${bill.NIC}</span>
+					</div>
+					<div class="item-row">
+						<span class="item-label">Email:</span>
+						<span class="item-value">${bill.email || 'N/A'}</span>
+					</div>
+					
+					<!-- Footer -->
+					<div class="footer">
+						<div>...........................Thank You ... Come Again...........................</div>
+						<div style="margin-top: 5px;">Bill No: ${bill.billNumber} | Tech: ${bill.technicianNum}</div>
+					</div>
+					<div class="footer-small">
+						POS System by EXE.LK +94 70 332 9900
+					</div>
+				</div>
+			</body>
+			</html>
+		`;
+
+		printWindow.document.write(printContent);
+		printWindow.document.close();
+		printWindow.focus();
+		printWindow.print();
+		printWindow.close();
+	};
+
+	const getStatusColor = (status: string) => {
+		switch (status?.toLowerCase()) {
+			case 'waiting': return '#28a745';
+			case 'ready to repair': return '#17a2b8';
+			case 'in progress': return '#ffc107';
+			case 'reject': return '#dc3545';
+			case 'repair completed': return '#6f42c1';
+			case 'handover': return '#20c997';
+			default: return '#6c757d';
+		}
+	};
+
 	useEffect(() => {
 		if (inputRef.current) {
 			inputRef.current.focus();
@@ -604,7 +852,7 @@ const Index: NextPage = () => {
 														<td>{bill.CustomerMobileNum}</td>
 														{/* <td>{bill.email}</td> */}
 														<td>{bill.NIC}</td>
-														<td>{bill.cost}</td>
+														<td>{bill.totalCost}</td>
 														<td>
 															<span
 																className={`badge rounded-pill ${getStatusColorClass(
@@ -628,6 +876,12 @@ const Index: NextPage = () => {
 																onClick={() =>
 																	handleClickDelete(bill)
 																}></Button>
+															<Button
+																className='m-2'
+																icon='Print'
+																color='success'
+																onClick={() => handlePrintBill(bill)}
+																title='Print Bill'></Button>
 														</td>
 													</tr>
 												))}
