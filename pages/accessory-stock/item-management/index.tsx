@@ -44,6 +44,9 @@ const Index: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['100']);
 	const [lastDoc, setLastDoc] = useState(null);
+	const [showLowStockAlert, setShowLowStockAlert] = useState(false);
+	const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+	const [lowStockAlertShown, setLowStockAlertShown] = useState(false);
 	const {
 		data: itemAcces,
 		error,
@@ -68,6 +71,28 @@ const Index: NextPage = () => {
 			inputRef.current.focus();
 		}
 	}, [itemAcces]);
+
+	// Check for low stock items and show alert only once on initial load
+	useEffect(() => {
+		if (itemAcces?.data && !lowStockAlertShown) {
+			// Find items that are at or below reorder level
+			const lowItems = itemAcces.data.filter((item: any) => 
+				item.quantity <= item.reorderLevel
+			);
+			setLowStockItems(lowItems);
+			if (lowItems.length > 0) {
+				setShowLowStockAlert(true);
+				setLowStockAlertShown(true);
+				// Show notification only on initial load
+				Swal.fire({
+					title: 'Low Stock Alert',
+					html: `<p>${lowItems.length} item(s) are at or below reorder level</p>`,
+					icon: 'warning',
+					confirmButtonText: 'OK',
+				});
+			}
+		}
+	}, [itemAcces?.data, lowStockAlertShown]);
 
 	const handleClickDelete = async (itemAcce: any) => {
 		if (itemAcce.quantity > 0) {
