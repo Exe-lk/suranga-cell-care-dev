@@ -33,7 +33,8 @@ import bill from '../../../assets/img/bill/WhatsApp_Image_2024-09-12_at_12.26.10
 import { useGetItemDissQuery } from '../../../redux/slices/itemManagementDisApiSlice';
 import { useGetModelsQuery } from '../../../redux/slices/modelApiSlice';
 import { useGetBrandsQuery } from '../../../redux/slices/brandApiSlice';
-import Select, { Option } from '../../../components/bootstrap/forms/Select';
+import Select from '../../../components/bootstrap/forms/Select';
+import Option from '../../../components/bootstrap/Option';
 
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();

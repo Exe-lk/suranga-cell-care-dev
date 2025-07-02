@@ -254,8 +254,10 @@ const Index: React.FC = () => {
 										</DropdownToggle>
 										<DropdownMenu isAlignmentEnd>
 											<DropdownItem onClick={() => handleExport('csv')}>
-												<Icon icon='FileDownload' className='me-2' />
-												Download CSV
+												<span>
+													<Icon icon='FileDownload' className='me-2' />
+													Download CSV
+												</span>
 											</DropdownItem>
 										</DropdownMenu>
 									</Dropdown>
