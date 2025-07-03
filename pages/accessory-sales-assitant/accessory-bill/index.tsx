@@ -608,6 +608,12 @@ function index() {
 	};
 
 	const addbill = async () => {
+		// Validate contact number first - make it required
+		if (!contact || contact === 0 || String(contact).trim() === '') {
+			Swal.fire('Error', 'Contact number is required to print the bill.', 'error');
+			return;
+		}
+
 		if (orderedItems.length > 0) {
 			try {
 				// Check if all items have sufficient stock before proceeding

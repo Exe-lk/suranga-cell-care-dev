@@ -12,9 +12,9 @@ import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSl
 import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetSuppliersQuery } from '../../redux/slices/supplierApiSlice';
+import { useGetDealersQuery } from '../../redux/slices/delearApiSlice';
 import Select from '../bootstrap/forms/Select';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { storage } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 interface StockAddModalProps {
 	id: string;
@@ -81,6 +81,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const [generatedbarcode, setGeneratedBarcode] = useState<any>();
 	const nowQuantity = quantity;
 	const [imageurl, setImageurl] = useState<any>(null);
+	const { data: dealers } = useGetDealersQuery(undefined);
 
 	useEffect(() => {
 		if (isSuccess && stockInData) {
@@ -123,38 +124,37 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				showConfirmButton: false,
 			});
 			
-			// Assuming generatePDF returns a Promise
-			const pdfFile = imageurl;
-			console.log("Uploading image:", pdfFile.name);
-			const storageRef = ref(storage, `nic/${pdfFile.name}_${Date.now()}`); // Add timestamp to prevent name collisions
-			const uploadTask = uploadBytesResumable(storageRef, pdfFile);
+			try {
+				const pdfFile = imageurl;
+				console.log("Uploading image:", pdfFile.name);
+				
+				// Generate unique filename with timestamp
+				const fileName = `${pdfFile.name}_${Date.now()}`;
+				const filePath = `nic/${fileName}`;
+				
+				// Upload to Supabase Storage
+				const { data, error } = await supabase.storage
+					.from('nics') // Using the 'nics' bucket
+					.upload(filePath, pdfFile);
 
-			return new Promise((resolve, reject) => {
-				uploadTask.on(
-					'state_changed',
-					(snapshot) => {
-						const progress1 = Math.round(
-							(snapshot.bytesTransferred / snapshot.totalBytes) * 100,
-						);
-						console.log("Upload progress:", progress1);
-					},
-					(error) => {
-						console.error("Upload error:", error.message);
-						reject(error.message);
-					},
-					() => {
-						getDownloadURL(uploadTask.snapshot.ref)
-							.then((url) => {
-								console.log('File uploaded successfully. URL:', url);
-								resolve(url); // Resolve the Promise with the URL
-							})
-							.catch((error) => {
-								console.error("Failed to get download URL:", error.message);
-								reject(error.message);
-							});
-					},
-				);
-			});
+				if (error) {
+					console.error("Upload error:", error.message);
+					throw new Error(error.message);
+				}
+
+				// Get public URL
+				const { data: urlData } = supabase.storage
+					.from('nics')
+					.getPublicUrl(filePath);
+
+				const publicUrl = urlData.publicUrl;
+				console.log('File uploaded successfully. URL:', publicUrl);
+				return publicUrl;
+				
+			} catch (error: any) {
+				console.error("Upload failed:", error.message);
+				throw error;
+			}
 		} else {
 			return '';
 		}
@@ -753,6 +753,35 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 							</Select>
 							{formik.touched.category && formik.errors.category ? (
 								<div className='invalid-feedback'>{formik.errors.category}</div>
+							) : (
+								<></>
+							)}
+						</FormGroup>
+					)}
+
+					{formik.values.type === 'Accessory' && (
+						<FormGroup id='dealerName' label='Dealer Name' className='col-md-6'>
+							<Select
+								id='dealerName'
+								name='dealerName'
+								ariaLabel='dealerName'
+								onChange={formik.handleChange}
+								value={formik.values.dealerName}
+								onBlur={formik.handleBlur}
+								className={`form-control ${
+									formik.touched.dealerName && formik.errors.dealerName
+										? 'is-invalid'
+										: ''
+								}`}>
+								<option value=''>Select a Dealer</option>
+								{dealers?.map((dealer: { id: string; name: string }) => (
+									<option key={dealer.id} value={dealer.name}>
+										{dealer.name}
+									</option>
+								))}
+							</Select>
+							{formik.touched.dealerName && formik.errors.dealerName ? (
+								<div className='invalid-feedback'>{formik.errors.dealerName}</div>
 							) : (
 								<></>
 							)}

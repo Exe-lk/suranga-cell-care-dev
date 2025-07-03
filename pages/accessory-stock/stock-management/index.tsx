@@ -26,7 +26,8 @@ const Index: NextPage = () => {
 	const [selectedDate, setSelectedDate] = useState('');
 	const today = new Date();
 	const [startDate, setStartDate] = useState<string>('');
-	// Use our new query to get ALL records without date filtering
+	
+	// Use our query to get ALL records - search works independently of date
 	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
@@ -56,21 +57,44 @@ const Index: NextPage = () => {
 	const [endDate, setEndDate] = useState<string>('');
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	// Simplified filtering logic that applies date filtering in the frontend
+	// Improved filtering logic - search works independently, date is optional
 	const filteredTransactions = StockInOuts?.filter((trans: any) => {
-		// Apply date filtering only if we have a valid date to filter by
+		// First filter by active status
+		if (!trans.status) return false;
+		
+		// Apply stock type filtering
+		if (selectedUsers.length > 0 && !selectedUsers.includes(trans.stock)) {
+			return false;
+		}
+		
+		// Apply search term filtering (independent of date)
+		if (searchTerm) {
+			const search = searchTerm.toLowerCase();
+			const matchesSearch = (
+				trans.barcode?.toString().toLowerCase().includes(search) ||
+				trans.brand?.toLowerCase().includes(search) ||
+				trans.model?.toLowerCase().includes(search) ||
+				(trans.brand + ' ' + trans.model)?.toLowerCase().includes(search) ||
+				(trans.category + " " + trans.brand + " " + trans.model)?.toLowerCase().includes(search) ||
+				(trans.category + " " + trans.model + " " + trans.brand)?.toLowerCase().includes(search) ||
+				trans.category?.toLowerCase().includes(search) ||
+				trans.stock?.toLowerCase().includes(search) ||
+				trans.description?.toLowerCase().includes(search)
+			);
+			if (!matchesSearch) return false;
+		}
+		
+		// Apply date filtering ONLY if a date is selected (optional)
 		if (startDate && startDate.trim() !== '') {
 			const transactionDate = trans.date ? new Date(trans.date) : null;
-			const start = startDate ? new Date(startDate) : null;
+			const start = new Date(startDate);
 			
-			// Skip records without a date or with an invalid date
+			// Skip records without a date or with an invalid date when date filter is active
 			if (!transactionDate) return false;
 			
-			if (start) {
-				return transactionDate >= start;
-			}
+			if (transactionDate < start) return false;
 		}
-		// If no date filtering, include all records
+		
 		return true;
 	});
 
@@ -273,7 +297,7 @@ const Index: NextPage = () => {
 						id='searchInput'
 						type='search'
 						className='border-0 shadow-none bg-transparent'
-						placeholder='Search...'
+						placeholder='Search by barcode, brand, model, category, stock type, or description...'
 						onChange={(event: any) => setSearchTerm(event.target.value)}
 						value={searchTerm}
 						ref={inputRef}
@@ -313,11 +337,12 @@ const Index: NextPage = () => {
 											/>
 										))}
 									</ChecksGroup>
-									<FormGroup label='Date' className='col-6'>
+									<FormGroup label='Date Filter (Optional)' className='col-6'>
 										<Input
 											type='date'
 											onChange={(e: any) => setStartDate(e.target.value)}
 											value={startDate}
+											placeholder='Filter by start date (optional)'
 										/>
 									</FormGroup>
 									<div className='col-12 mt-3'>
@@ -333,7 +358,7 @@ const Index: NextPage = () => {
 												}
 											}}
 										>
-											Clear All Filters
+											Clear All Filters & Search
 										</Button>
 									</div>
 								</div>
@@ -390,95 +415,48 @@ const Index: NextPage = () => {
 									<tbody>
 										{isLoading && (
 											<tr>
-												<td>Loading...</td>
+												<td colSpan={9}>Loading...</td>
 											</tr>
 										)}
 										{error && (
 											<tr>
-												<td>Error fetching stocks.</td>
+												<td colSpan={9}>Error fetching stocks.</td>
 											</tr>
 										)}
-										{filteredTransactions &&
-											(() => {
-												const activeRecords = filteredTransactions.filter((s: { status: boolean }) => s.status === true);
-												
-												// Apply stock type filtering
-												const stockFilteredRecords = activeRecords.filter((item: any) => {
-													if (selectedUsers.length === 0) return true;
-													return selectedUsers.includes(item.stock);
-												});
-												
-												// Apply search term filtering
-												const searchFilteredRecords = stockFilteredRecords.filter((brand: any) => {
-													if (!searchTerm) return true;
-													
-													const search = searchTerm.toLowerCase();
-													return (
-														brand.barcode?.toString().toLowerCase().includes(search) ||
-														brand.brand?.toLowerCase().includes(search) ||
-														brand.model?.toLowerCase().includes(search) ||
-														(brand.brand + ' ' + brand.model)?.toLowerCase().includes(search) ||
-														(brand.category+" "+brand.brand+" "+brand.model)?.toLowerCase().includes(search) ||
-														(brand.category+" "+brand.model+" "+brand.brand)?.toLowerCase().includes(search) ||
-														brand.category?.toLowerCase().includes(search) ||
-														brand.stock?.toLowerCase().includes(search)
-													);
-												});
-												
-												// Sort records by date (newest first)
-												const sortedRecords = searchFilteredRecords.sort((a: any, b: any) => {
+										{filteredTransactions && filteredTransactions.length > 0 ? (
+											// Sort records by date (newest first) and paginate
+											dataPagination(
+												filteredTransactions.sort((a: any, b: any) => {
 													const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
 													const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
 													return dateB - dateA;
-												});
-												
-												// Paginate the records
-												return dataPagination(
-													sortedRecords,
-													currentPage,
-													perPage,
-												);
-											})()
-												.map((brand: any, index: any) => {
-													const formattedTimestamp = brand.created_at 
-														? new Date(brand.created_at).toLocaleString() 
-														: 'No timestamp';
+												}),
+												currentPage,
+												perPage,
+											).map((brand: any, index: any) => {
+												const formattedTimestamp = brand.created_at 
+													? new Date(brand.created_at).toLocaleString() 
+													: 'No timestamp';
 
-													return (
-														<tr key={index}>
-															<td>{formattedTimestamp}</td>
-															<th>{brand.barcode}</th>
-															<td>{brand.category}</td>
-															<td>{brand.brand}</td>
-															<td>{brand.model}</td>
-															<td>{brand.quantity}</td>
-															<td>{brand.sellingPrice?.toFixed(2)}</td>
-															<td>{brand.description}</td>
-															<td>{brand.stock}</td>
-														</tr>
-													);
-												})}
-										{filteredTransactions && 
-										 filteredTransactions.filter((s: { status: boolean }) => s.status === true)
-										 .filter((item: any) => selectedUsers.length === 0 || selectedUsers.includes(item.stock))
-										 .filter((brand: any) => {
-											if (!searchTerm) return true;
-											const search = searchTerm.toLowerCase();
-											return (
-												brand.barcode?.toString().toLowerCase().includes(search) ||
-												brand.brand?.toLowerCase().includes(search) ||
-												brand.model?.toLowerCase().includes(search) ||
-												(brand.brand + ' ' + brand.model)?.toLowerCase().includes(search) ||
-												(brand.category+" "+brand.brand+" "+brand.model)?.toLowerCase().includes(search) ||
-												(brand.category+" "+brand.model+" "+brand.brand)?.toLowerCase().includes(search) ||
-												brand.category?.toLowerCase().includes(search) ||
-												brand.stock?.toLowerCase().includes(search)
-											);
-										 }).length === 0 && (
+												return (
+													<tr key={index}>
+														<td>{formattedTimestamp}</td>
+														<th>{brand.barcode}</th>
+														<td>{brand.category}</td>
+														<td>{brand.brand}</td>
+														<td>{brand.model}</td>
+														<td>{brand.quantity}</td>
+														<td>{brand.sellingPrice?.toFixed(2)}</td>
+														<td>{brand.description}</td>
+														<td>{brand.stock}</td>
+													</tr>
+												);
+											})
+										) : (
 											<tr>
 												<td colSpan={9} className="text-center py-4">
-													No matching records found. 
-													{selectedUsers.length > 0 && (
+													No matching records found.
+													{selectedUsers.length > 0 && selectedUsers.length < 2 && (
 														<span> Current filters: <strong>{selectedUsers.join(', ')}</strong></span>
 													)}
 													{startDate && (
@@ -487,7 +465,26 @@ const Index: NextPage = () => {
 													{searchTerm && (
 														<span> Search: <strong>"{searchTerm}"</strong></span>
 													)}
-													<div className="mt-2">Try adjusting your filters or clearing the date filter.</div>
+													<div className="mt-2">
+														Try adjusting your filters or search terms.
+														{(startDate || searchTerm || selectedUsers.length < 2) && (
+															<Button
+																color="link"
+																size="sm"
+																className="p-0 ms-2"
+																onClick={() => {
+																	setSelectedUsers(['stockIn', 'stockOut']);
+																	setStartDate('');
+																	setSearchTerm('');
+																	if (inputRef.current) {
+																		inputRef.current.value = '';
+																	}
+																}}
+															>
+																Clear all filters
+															</Button>
+														)}
+													</div>
 												</td>
 											</tr>
 										)}
