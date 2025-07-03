@@ -32,6 +32,8 @@ import { useGetItemAccesQuery } from '../../../redux/slices/itemManagementAcceAp
 import bill from '../../../assets/img/bill/WhatsApp_Image_2024-09-12_at_12.26.10_50606195-removebg-preview (1).png';
 import { set } from 'date-fns';
 import Spinner from '../../../components/bootstrap/Spinner';
+import Select from '../../../components/bootstrap/forms/Select';
+import Option from '../../../components/bootstrap/Option';
 
 const Index: NextPage = () => {
 	const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +56,7 @@ const Index: NextPage = () => {
 		refetch,
 	} = useGetItemAcces1Query({ page: currentPage, perPage, lastDoc,searchtearm:searchTerm });
 	console.log(itemAcces?.data);
-	const data = itemAcces?.data;
+	const data = itemAcces?.data || [];
 	const [updateItemAcce] = useUpdateItemAcceMutation();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -74,9 +76,9 @@ const Index: NextPage = () => {
 
 	// Check for low stock items and show alert only once on initial load
 	useEffect(() => {
-		if (itemAcces?.data && !lowStockAlertShown) {
+		if (data && data.length > 0 && !lowStockAlertShown) {
 			// Find items that are at or below reorder level
-			const lowItems = itemAcces.data.filter((item: any) => 
+			const lowItems = data.filter((item: any) => 
 				item.quantity <= item.reorderLevel
 			);
 			setLowStockItems(lowItems);
@@ -86,13 +88,86 @@ const Index: NextPage = () => {
 				// Show notification only on initial load
 				Swal.fire({
 					title: 'Low Stock Alert',
-					html: `<p>${lowItems.length} item(s) are at or below reorder level</p>`,
+					html: `
+						<style>
+							.low-stock-table {
+								width: 100%;
+								border-collapse: collapse;
+								margin-top: 10px;
+							}
+							.low-stock-table th,
+							.low-stock-table td {
+								border: 1px solid #ddd;
+								padding: 8px;
+								text-align: left;
+							}
+							.low-stock-table th {
+								background-color: #f2f2f2;
+								font-weight: bold;
+							}
+							.low-stock-table tbody tr {
+								background-color: rgba(255, 193, 7, 0.1);
+							}
+							.low-stock-table tbody tr:nth-child(even) {
+								background-color: rgba(255, 193, 7, 0.2);
+							}
+							.table-container {
+								max-height: 400px;
+								overflow-y: auto;
+								margin-top: 10px;
+							}
+							.warning-icon {
+								color: #ffc107;
+								font-size: 48px;
+								margin-bottom: 10px;
+							}
+						</style>
+						<div style="text-align: center;">
+							<div class="warning-icon">⚠️</div>
+							<p style="margin-bottom: 20px; color: #666;">${lowItems.length} item(s) are at or below their reorder level:</p>
+						</div>
+						<div class="table-container">
+							<table class="low-stock-table">
+								<thead>
+									<tr>
+										<th>Item</th>
+										<th>Category</th>
+										<th>Quantity</th>
+										<th>Reorder Level</th>
+									</tr>
+								</thead>
+								<tbody>
+									${lowItems.map((item: any) => `
+										<tr>
+											<td>${item.brand} ${item.model}</td>
+											<td>${item.category || 'N/A'}</td>
+											<td style="text-align: center; color: ${item.quantity === 0 ? '#dc3545' : '#ffc107'}; font-weight: bold;">${item.quantity}</td>
+											<td style="text-align: center;">${item.reorderLevel}</td>
+										</tr>
+									`).join('')}
+								</tbody>
+							</table>
+						</div>
+					`,
 					icon: 'warning',
 					confirmButtonText: 'OK',
+					width: 700,
+					customClass: {
+						popup: 'low-stock-popup'
+					}
 				});
 			}
 		}
-	}, [itemAcces?.data, lowStockAlertShown]);
+	}, [data, lowStockAlertShown]);
+
+	const getRowStyle = (item: any) => {
+		if (item.quantity <= item.reorderLevel) {
+			return {
+				backgroundColor: 'rgba(255, 193, 7, 0.1)', // Light yellow background for low stock
+			};
+		}
+		return {};
+	};
 
 	const handleClickDelete = async (itemAcce: any) => {
 		if (itemAcce.quantity > 0) {
@@ -218,6 +293,91 @@ const Index: NextPage = () => {
 							</div>
 						</DropdownMenu>
 					</Dropdown>
+					{lowStockItems.length > 0 && (
+						<Button
+							icon='Warning'
+							color='warning'
+							isLight
+							onClick={() => {
+								Swal.fire({
+									title: 'Low Stock Items',
+									html: `
+										<style>
+											.low-stock-table {
+												width: 100%;
+												border-collapse: collapse;
+												margin-top: 10px;
+											}
+											.low-stock-table th,
+											.low-stock-table td {
+												border: 1px solid #ddd;
+												padding: 8px;
+												text-align: left;
+											}
+											.low-stock-table th {
+												background-color: #f2f2f2;
+												font-weight: bold;
+											}
+											.low-stock-table tbody tr {
+												background-color: rgba(255, 193, 7, 0.1);
+											}
+											.low-stock-table tbody tr:nth-child(even) {
+												background-color: rgba(255, 193, 7, 0.2);
+											}
+											.table-container {
+												max-height: 400px;
+												overflow-y: auto;
+												margin-top: 10px;
+											}
+											.warning-icon {
+												color: #ffc107;
+												font-size: 48px;
+												margin-bottom: 10px;
+											}
+										</style>
+										<div style="text-align: center;">
+											<div class="warning-icon">⚠️</div>
+											<p style="margin-bottom: 20px; color: #666;">The following items are at or below their reorder level:</p>
+										</div>
+										<div class="table-container">
+											<table class="low-stock-table">
+												<thead>
+													<tr>
+														<th>Item</th>
+														<th>Category</th>
+														<th>Quantity</th>
+														<th>Reorder Level</th>
+													</tr>
+												</thead>
+												<tbody>
+													${lowStockItems.map((item: any) => `
+														<tr>
+															<td>${item.brand} ${item.model}</td>
+															<td>${item.category || 'N/A'}</td>
+															<td style="text-align: center; color: ${item.quantity === 0 ? '#dc3545' : '#ffc107'}; font-weight: bold;">${item.quantity}</td>
+															<td style="text-align: center;">${item.reorderLevel}</td>
+														</tr>
+													`).join('')}
+												</tbody>
+											</table>
+										</div>
+									`,
+									icon: 'warning',
+									confirmButtonText: 'OK',
+									width: 700,
+									customClass: {
+										popup: 'low-stock-popup'
+									}
+								});
+							}}
+							className='position-relative'>
+							Low Stock Alert
+							<span className='position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger'>
+								{lowStockItems.length}
+								<span className='visually-hidden'>low stock items</span>
+							</span>
+						</Button>
+					)}
 					<Button
 						icon='AddCircleOutline'
 						color='success'
@@ -287,50 +447,27 @@ const Index: NextPage = () => {
 												<td>Error fetching items.</td>
 											</tr>
 										)}
-										{itemAcces &&
-											dataPagination(itemAcces, currentPage, perPage)
+										{data &&
+											data
 												?.filter((itemAcces: any) =>
 													selectedUsers.length > 0
 														? selectedUsers.includes(itemAcces.type)
 														: true,
 												)
-												.filter((item: any) => {
-													const search = searchTerm.toLowerCase();
-													return (
-														item.code
-															?.toString()
-															.toLowerCase()
-															.includes(search) ||
-														item.category
-															?.toLowerCase()
-															.includes(search) ||
-														item.brand
-															?.toLowerCase()
-															.includes(search) ||
-														item.model
-															?.toLowerCase()
-															.includes(search) ||
-														(item.brand + ' ' + item.model)
-															?.toLowerCase()
-															.includes(search) ||
-														(item.category + ' ' + item.brand + ' ' + item.model)
-															?.toLowerCase()
-															.includes(search) ||
-														(item.category + ' ' + item.model + ' ' + item.brand)
-															?.toLowerCase()
-															.includes(search)
-													);
-												})
-												.sort((a: any, b: any) => b.code - a.code)
 												.map((itemAcces: any, index: any) => (
-													<tr key={index}>
+													<tr key={index} style={getRowStyle(itemAcces)}>
 														<td>{itemAcces.code}</td>
 														<td>{itemAcces.type}</td>
 														{/* <td>{itemAcces.mobileType}</td> */}
 														<td>{itemAcces.category}</td>
 														<td>{itemAcces.model}</td>
 														<td>{itemAcces.brand}</td>
-														<td>{itemAcces.quantity}</td>
+														<td>
+															{itemAcces.quantity}
+															{itemAcces.quantity <= itemAcces.reorderLevel && (
+																<Icon icon='Warning' color='warning' className='ms-2' />
+															)}
+														</td>
 														<td>{itemAcces.reorderLevel}</td>
 														<td>{itemAcces.description}</td>
 														<td>
@@ -395,7 +532,7 @@ const Index: NextPage = () => {
 								</Button>
 							</CardBody>
 							<PaginationButtons
-								data={itemAcces}
+								data={data}
 								label='parts'
 								setCurrentPage={setCurrentPage}
 								currentPage={currentPage}

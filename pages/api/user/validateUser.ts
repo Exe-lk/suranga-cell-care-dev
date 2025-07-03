@@ -1,18 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from '../../../firebaseConfig';
+import { supabase } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     const { email } = req.body;
 
     try {
-      // Check if the user is authenticated
-      const user = auth.currentUser;
+      // Get the current session from Supabase
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (!user || user.email !== email) {
+      if (error || !session || !session.user || session.user.email !== email) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
+      // Optional: Additional validation can be added here
+      return res.status(200).json({ message: 'User is authenticated' });
       
     } catch (error) {
       return res.status(500).json({ error: 'Internal Server Error' });
