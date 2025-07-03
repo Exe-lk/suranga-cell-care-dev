@@ -388,6 +388,12 @@ const Index: NextPage = () => {
 
 		const currentDate = new Date().toLocaleDateString();
 		
+		// Helper function to format array as string
+		const formatArrayToString = (arr: any[]) => {
+			if (!arr || !Array.isArray(arr) || arr.length === 0) return 'None';
+			return arr.join(', ');
+		};
+		
 		const printContent = `
 			<!DOCTYPE html>
 			<html>
@@ -508,6 +514,16 @@ const Index: NextPage = () => {
 						color: black;
 						margin-top: 5px;
 					}
+					.accessories-list {
+						font-size: 10px;
+						line-height: 1.3;
+						word-wrap: break-word;
+					}
+					.condition-list {
+						font-size: 10px;
+						line-height: 1.3;
+						word-wrap: break-word;
+					}
 					@media print {
 						body { 
 							margin: 0; 
@@ -564,6 +580,33 @@ const Index: NextPage = () => {
 					<div class="item-row">
 						<span class="item-label">Repair Type:</span>
 						<span class="item-value">${bill.repairType}</span>
+					</div>
+					${bill.color ? `
+					<div class="item-row">
+						<span class="item-label">Color:</span>
+						<span class="item-value">${bill.color}</span>
+					</div>
+					` : ''}
+					${bill.IME ? `
+					<div class="item-row">
+						<span class="item-label">IMEI:</span>
+						<span class="item-value">${bill.IME}</span>
+					</div>
+					` : ''}
+					
+					<!-- Device Condition -->
+					<div class="item-row">
+						<span class="item-label">Condition:</span>
+						<span class="item-value condition-list">${formatArrayToString(bill.Condition)}</span>
+					</div>
+					
+					<span class="divider"></span>
+					
+					<!-- Customer Accessories -->
+					<div class="section-title">CUSTOMER ACCESSORIES</div>
+					<div class="item-row">
+						<span class="item-label">Provided:</span>
+						<span class="item-value accessories-list">${formatArrayToString(bill.Item)}</span>
 					</div>
 					
 					<span class="divider"></span>

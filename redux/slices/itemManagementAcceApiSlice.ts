@@ -10,10 +10,20 @@ export const ItemAcceApiSlice = createApi({
       providesTags: ['ItemAcce'],
     }),
     getItemAcces1: builder.query({
-      query: ({ page, perPage, lastDoc,searchtearm }) => ({
-        // url: `itemManagementAcce/route1?page=${page}&perPage=${perPage}&lastDoc=${lastDoc || ''}&searchTerm=${searchtearm||''}`,
-        url: `itemManagementAcce/route`,
+      query: ({ page, perPage, lastDoc, searchtearm }) => ({
+        url: `itemManagementAcce/route?page=${page}&perPage=${perPage}&lastDoc=${lastDoc || ''}&searchTerm=${searchtearm || ''}`,
       }),
+      providesTags: ['ItemAcce'],
+      transformResponse: (response: any) => {
+        // Handle both old array format and new paginated format
+        if (Array.isArray(response)) {
+          return { data: response, pagination: null };
+        }
+        return response;
+      },
+    }),
+    getAllItemAccesForCodeGen: builder.query({
+      query: () => 'itemManagementAcce/route',
       providesTags: ['ItemAcce'],
     }),
     getItemAcceById: builder.query({
@@ -52,6 +62,7 @@ export const ItemAcceApiSlice = createApi({
 export const {
   useGetItemAccesQuery,
   useGetItemAcces1Query,
+  useGetAllItemAccesForCodeGenQuery,
   useGetItemAcceByIdQuery,
   useGetDeleteItemAccesQuery,
   useAddItemAcceMutation,

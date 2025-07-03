@@ -103,7 +103,6 @@ const Index: NextPage = () => {
 						email: user.email,
 						mobile: user.mobile,
 						status: false,
-						level:user.level
 					}).unwrap();
 					Swal.fire('Deleted!', 'User has been deleted.', 'success');
 					refetch();

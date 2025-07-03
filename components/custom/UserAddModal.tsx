@@ -7,13 +7,9 @@ import Icon from '../icon/Icon';
 import FormGroup from '../bootstrap/forms/FormGroup';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
-import { collection, addDoc } from 'firebase/firestore';
-import { firestore, storage, auth } from '../../firebaseConfig';
 import Swal from 'sweetalert2';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import Select from '../bootstrap/forms/Select';
 import Option from '../bootstrap/Option';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useAddUserMutation } from '../../redux/slices/userManagementApiSlice';
 import { useGetUsersQuery } from '../../redux/slices/userManagementApiSlice';
 
@@ -36,7 +32,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			email: '',
 			mobile: '',
 			status: true,
-			level:'level 1'
 		},
 		validate: (values) => {
 			const errors: {
@@ -46,16 +41,12 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				email?: string;
 				password?: string;
 				mobile?: string;
-				level?:string;
 			} = {};
 			if (!values.role) {
 				errors.role = 'Required';
 			}
 			if (!values.name) {
 				errors.name = 'Required';
-			}
-			if (!values.level) {
-				errors.level = 'Required';
 			}
 			if (!values.mobile) {
 				errors.mobile = 'Required';
@@ -89,6 +80,7 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				});
 				try {
 					const response: any = await addUser(values).unwrap();
+					await Swal.close();
 					refetch();
 					await Swal.fire({
 						icon: 'success',
@@ -96,18 +88,33 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					});
 					formik.resetForm();
 					setIsOpen(false);
-				} catch (error) {
+				} catch (error: any) {
+					await Swal.close();
 					console.error('Error during handleSubmit: ', error);
+					
+					// Handle different error types from the API
+					let errorMessage = 'An unexpected error occurred';
+					
+					if (error?.data?.error) {
+						errorMessage = error.data.error;
+					} else if (error?.message) {
+						errorMessage = error.message;
+					}
+					
 					await Swal.fire({
 						icon: 'error',
-						title: 'Error',
-						text: 'Your Email or NIC is already in use',
+						title: 'Error Creating User',
+						text: errorMessage,
 					});
 				}
 			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				Swal.close;
-				alert('An error occurred during file upload. Please try again later.');
+				console.error('Error during form submission: ', error);
+				await Swal.close();
+				await Swal.fire({
+					icon: 'error',
+					title: 'Error',
+					text: 'An error occurred during form submission. Please try again later.',
+				});
 			}
 		},
 	});
@@ -162,23 +169,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 							<Option value={'Accessory sales assitant'}>Accessory sales assitant</Option>
 						</Select>
 					</FormGroup>
-					{formik.values.role=="cashier" &&(
-						<FormGroup id='level' label='Level' className='col-md-6'>
-						<Select
-							ariaLabel='Default select example'
-							onChange={formik.handleChange}
-							value={formik.values.level}
-							onBlur={formik.handleBlur}
-							isValid={formik.isValid}
-							isTouched={formik.touched.level}
-							invalidFeedback={formik.errors.level}>
-							<Option>Select the role</Option>
-							<Option value={'level 1'}>Level 1</Option>
-							<Option value={'level 2'}>Level 2</Option>
-							
-						</Select>
-					</FormGroup>
-					)}
 					<FormGroup id='mobile' label='Mobile number' className='col-md-6'>
 						<Input
 							type='text'

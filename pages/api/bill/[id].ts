@@ -21,8 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'PUT': {
         console.log('API received data:', req.body);
         const { billNumber,dateIn,phoneDetail, phoneModel, repairType, technicianNum, CustomerName, CustomerMobileNum, NIC, componentCost,repairCost,totalCost, Price, Status, DateOut, status } = req.body;
-        if (!phoneDetail) {
-          res.status(400).json({ error: 'Phone Detail is required' });
+        
+        // Check if this is a cost update or general bill update
+        const isCostUpdate = componentCost !== undefined || repairCost !== undefined || totalCost !== undefined;
+        const isGeneralUpdate = phoneDetail !== undefined;
+        
+        if (!isCostUpdate && !isGeneralUpdate) {
+          res.status(400).json({ error: 'Either cost fields or phone detail is required for update' });
           return;
         }
       

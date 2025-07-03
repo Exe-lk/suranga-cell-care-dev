@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
-import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, query, where } from 'firebase/firestore';
 import { firestore } from '../../../firebaseConfig';
 import 'react-simple-keyboard/build/css/index.css';
 import Swal from 'sweetalert2';
@@ -722,7 +722,16 @@ function index() {
 					);
 					localStorage.setItem('drafts', JSON.stringify(updatedDrafts));
 					if (!status) {
-						await addDoc(collection(firestore, 'customer'), { name, contact });
+						// Create new customer in Supabase instead of Firebase
+						const { error: customerError } = await supabase
+							.from('customer')
+							.insert([{ name, contact }]);
+						
+						if (customerError) {
+							console.error('Error saving customer:', customerError);
+						} else {
+							console.log('New customer saved successfully');
+						}
 					}
 					const values = {
 						orders: orderedItems,
@@ -898,22 +907,36 @@ function index() {
 
 	const handlereturn = async (id: any) => {
 		try {
-			console.log(id);
-			const docRef = doc(firestore, 'return', id);
-			const docSnap = await getDoc(docRef);
+			console.log('Fetching return data for ID:', id);
+			
+			const { data, error } = await supabase
+				.from('return')
+				.select('*')
+				.eq('id', id)
+				.single();
 
-			if (docSnap.exists()) {
-				// Get document data along with its ID
-				const data = { id: docSnap.id, ...docSnap.data() };
-				console.log('Document Data:', data);
+			if (error) {
+				console.error('Supabase error:', error);
+				if (error.code === 'PGRST116') {
+					// No rows returned
+					Swal.fire('Warning..!', 'NO Return Id Found', 'error');
+					setReturnid('');
+					return null;
+				}
+				throw error;
+			}
+
+			if (data) {
+				console.log('Return Data:', data);
 				setReturndata(data);
 			} else {
-				Swal.fire('Warning..!', 'NO Return Id', 'error');
+				Swal.fire('Warning..!', 'NO Return Id Found', 'error');
 				setReturnid('');
 				return null;
 			}
 		} catch (error) {
-			console.error('Error fetching document:', error);
+			console.error('Error fetching return data:', error);
+			Swal.fire('Error', 'Failed to fetch return data. Please try again.', 'error');
 		}
 	};
 
