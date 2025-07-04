@@ -21,6 +21,7 @@ interface StockAddModalProps {
 	isOpen: boolean;
 	setIsOpen(...args: unknown[]): unknown;
 	quantity: any;
+	refetch: () => void;
 }
 
 interface StockIn {
@@ -45,7 +46,7 @@ interface StockIn {
 	imi: string;
 }
 
-const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity }) => {
+const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
 	const [stockIn, setStockIn] = useState<StockIn>({
 		id: '',
 		brand: '',
@@ -75,7 +76,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const { data: stockInData, isSuccess } = useGetItemAcceByIdQuery(id);
 	const [addstockIn, { isLoading }] = useAddStockInMutation();
 	const [updateStockInOut] = useUpdateStockInOutMutation();
-	const { refetch } = useGetItemAccesQuery(undefined);
 	const { data: stockInOuts } = useGetStockInOutsQuery(undefined);
 	const [generatedCode, setGeneratedCode] = useState('');
 	const [generatedbarcode, setGeneratedBarcode] = useState<any>();

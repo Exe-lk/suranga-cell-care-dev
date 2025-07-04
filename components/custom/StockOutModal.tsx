@@ -19,6 +19,7 @@ interface StockAddModalProps {
 	isOpen: boolean;
 	setIsOpen(...args: unknown[]): unknown;
 	quantity: any;
+	refetch: () => void;
 }
 
 const formatTimestamp = (seconds: number, nanoseconds: number): string => {
@@ -54,7 +55,7 @@ interface StockOut {
 	description: string;
 }
 
-const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity }) => {
+const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
 	const [stockOut, setStockOut] = useState<StockOut>({
 		cid: '',
 		model: '',
@@ -81,7 +82,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const [addstockOut] = useAddStockOutMutation();
 	const { data: stockOutData, isSuccess } = useGetItemAcceByIdQuery(id);
 	const [updateStockInOut] = useUpdateStockInOutMutation();
-	const { refetch } = useGetItemAccesQuery(undefined);
 
 	useEffect(() => {
 		if (isSuccess && stockOutData) {
@@ -217,7 +217,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				const response = await addstockOut(processedValues).unwrap();
 				console.log("Stock-out created response:", response);
 				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
-				refetch();
+				await refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });
 				formik.resetForm();
 				setIsOpen(false);

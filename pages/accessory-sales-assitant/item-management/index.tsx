@@ -581,12 +581,14 @@ const Index: NextPage = () => {
 				isOpen={addstockModalStatus}
 				id={id}
 				quantity={quantity}
+				refetch={refetch}
 			/>
 			<StockOutModal
 				setIsOpen={setEditstockModalStatus}
 				isOpen={editstockModalStatus}
 				id={id}
 				quantity={quantity}
+				refetch={refetch}
 			/>
 			<ItemDeleteModal setIsOpen={setDeleteModalStatus} isOpen={deleteModalStatus} id='' />
 		</PageWrapper>
