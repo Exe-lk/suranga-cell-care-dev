@@ -13,11 +13,19 @@ import PaginationButtons, {
 	dataPagination,
 	PER_COUNT,
 } from '../../../../components/PaginationButtons';
-import { useGetStockInOutsQuery } from '../../../../redux/slices/stockInOutAcceApiSlice';
+import { useGetAllStockRecordsQuery } from '../../../../redux/slices/stockInOutAcceApiSlice';
 
 const Index: NextPage = () => {
-	const { data: StockInOuts, error, isLoading } = useGetStockInOutsQuery(undefined);
-	console.log('StockInOuts', StockInOuts);
+	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
+	
+	console.log('=== BARCODE PAGE DEBUG ===');
+	console.log('All StockInOuts data:', StockInOuts);
+	console.log('Total records count:', StockInOuts?.length);
+	console.log('Records with barcodes:', StockInOuts?.filter((item: any) => item.barcode).length);
+	console.log('Mobile records:', StockInOuts?.filter((item: any) => item.type === 'Mobile').length);
+	console.log('stockIn records:', StockInOuts?.filter((item: any) => item.stock === 'stockIn').length);
+	console.log('Sample records with barcodes:', StockInOuts?.filter((item: any) => item.barcode).slice(0, 3));
+	
 	const [searchTerm, setSearchTerm] = useState('');
 	const [startDate, setStartDate] = useState<string>('');
 	const [endDate, setEndDate] = useState<string>('');

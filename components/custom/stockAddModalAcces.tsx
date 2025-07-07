@@ -84,9 +84,18 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const { data: dealers } = useGetDealersQuery(undefined);
 
 	useEffect(() => {
+		console.log("=== BARCODE GENERATION DEBUG START ===");
+		console.log("isSuccess:", isSuccess);
+		console.log("stockInData:", stockInData);
+		console.log("stockInData type:", stockInData?.type);
+		console.log("stockInOuts:", stockInOuts);
+		console.log("stockInOuts length:", stockInOuts?.length);
+		
 		if (isSuccess && stockInData) {
 			setStockIn(stockInData);
 		}
+		
+		// Generate barcode regardless of stockInOuts availability - FOR ALL ITEM TYPES
 		if (stockInOuts?.length) {
 			const lastCode = stockInOuts
 				.map((item: { code: string }) => item.code)
@@ -98,18 +107,44 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				}, '100000');
 			const newCode = incrementCode(lastCode);
 			setGeneratedCode(newCode);
+			console.log("Generated code from existing data:", newCode);
 		} else {
-			setGeneratedCode('100000');
-			setGeneratedBarcode('1000100000');
+			// Set fallback values when no stockInOuts data is available
+			const fallbackCode = '100001';
+			setGeneratedCode(fallbackCode);
+			
+			// Generate barcode with item code if available, otherwise use timestamp-based approach
+			const itemCode = stockInData?.code || '1000';
+			const barcodeValue = `${itemCode}${fallbackCode}`;
+			setGeneratedBarcode(barcodeValue);
+			
+			console.log("=== FALLBACK BARCODE GENERATION ===");
+			console.log("Item type:", stockInData?.type);
+			console.log("Item code:", itemCode);
+			console.log("Fallback code:", fallbackCode);
+			console.log("Generated barcode:", barcodeValue);
 		}
+		console.log("=== BARCODE GENERATION DEBUG END ===");
 	}, [isSuccess, stockInData, stockInOuts, isOpen]);
 
 	const incrementCode = (code: string) => {
+		console.log("=== INCREMENT CODE DEBUG ===");
+		console.log("Input code:", code);
+		console.log("Item type:", stockInData?.type);
+		
 		const numericPart = parseInt(code.replace(/\D/g, ''), 10);
-		const incrementedNumericPart = (numericPart + 1).toString().padStart(5, '0');
-		const barcode = (numericPart + 1).toString().padStart(10, '0');
-		const value = `${stockInData?.code}${incrementedNumericPart}`;
-		setGeneratedBarcode(value);
+		const incrementedNumericPart = (numericPart + 1).toString().padStart(6, '0');
+		// Ensure we have a proper barcode value - WORKS FOR ALL ITEM TYPES
+		const itemCode = stockInData?.code || '1000';
+		const barcodeValue = `${itemCode}${incrementedNumericPart}`;
+		setGeneratedBarcode(barcodeValue);
+		
+		console.log("Numeric part:", numericPart);
+		console.log("Incremented numeric part:", incrementedNumericPart);
+		console.log("Item code:", itemCode);
+		console.log("Final barcode value:", barcodeValue);
+		console.log("=== INCREMENT CODE DEBUG END ===");
+		
 		return incrementedNumericPart;
 	};
 
@@ -179,7 +214,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			stock: 'stockIn',
 			status: true,
 			sellingPrice: 0,
-			barcode: generatedbarcode,
+			barcode: generatedbarcode || '',
 			imi: '',
 			cid: stockIn.id || '',
 			suppName: '',
@@ -254,6 +289,11 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		},
 		onSubmit: async (values) => {
 			try {
+				console.log("=== FORM SUBMISSION DEBUG START ===");
+				console.log("Generated barcode value:", generatedbarcode);
+				console.log("Form values barcode:", values.barcode);
+				console.log("All form values:", values);
+				
 				// Show processing modal
 				Swal.fire({
 					title: 'Processing...',
@@ -281,18 +321,26 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					return; // Stop the submission process
 				}
 				
-				// 2. Prepare data for API
-				const stockInData = {
+				// 2. Prepare data for API - CRITICAL FIX: Ensure barcode is always present
+				const finalBarcode: string = generatedbarcode || values.barcode || `${stockInData?.code || '1000'}${Date.now().toString().slice(-6)}`;
+				
+				const submissionData = {
 					...values,
-					barcode: generatedbarcode,
+					barcode: finalBarcode,
 					NIC_Photo: url,
 				};
 				
-				console.log("Submitting stock in data:", stockInData);
+				console.log("=== FINAL SUBMISSION DATA ===");
+				console.log("Final barcode value:", finalBarcode);
+				console.log("Complete submission data:", submissionData);
+				console.log("Barcode type:", typeof finalBarcode);
+				console.log("Barcode length:", finalBarcode?.toString().length);
 				
 				try {
 					// 3. Add the stock-in record
-					const response = await addstockIn(stockInData).unwrap();
+					console.log("Sending to API:", submissionData);
+					const response = await addstockIn(submissionData).unwrap();
+					console.log("=== API RESPONSE ===");
 					console.log("Stock in response:", response);
 					
 					// 4. Update the item quantity
@@ -316,12 +364,16 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					await Swal.fire({
 						icon: 'success',
 						title: 'Stock In Added Successfully',
+						text: `Barcode: ${finalBarcode}`,
 					});
 					formik.resetForm();
 					setIsOpen(false);
+					console.log("=== FORM SUBMISSION DEBUG END ===");
 				} catch (apiError: any) {
 					// Handle API errors
+					console.error('=== API ERROR ===');
 					console.error('Error during stock in API call:', apiError);
+					console.error('API error details:', apiError.data);
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
@@ -330,6 +382,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				}
 			} catch (error) {
 				// Handle any other errors
+				console.error('=== UNEXPECTED ERROR ===');
 				console.error('Unexpected error during stock in:', error);
 				await Swal.fire({
 					icon: 'error',
@@ -358,10 +411,10 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			</ModalHeader>
 			<ModalBody className='px-4'>
 				<div className='row g-4'>
-					<FormGroup id='code' label='Generated Code' className='col-md-6'>
+					<FormGroup id='code' label='Generated Barcode' className='col-md-6'>
 						<Input
 							type='text'
-							value={generatedbarcode}
+							value={generatedbarcode || 'Generating...'}
 							readOnly
 							isValid={formik.isValid}
 							isTouched={formik.touched.code}
