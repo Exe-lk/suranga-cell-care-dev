@@ -13,11 +13,20 @@ import PaginationButtons, {
 	dataPagination,
 	PER_COUNT,
 } from '../../../../components/PaginationButtons';
-import { useGetStockInOutsQuery } from '../../../../redux/slices/stockInOutAcceApiSlice';
+import { useGetAllStockRecordsQuery } from '../../../../redux/slices/stockInOutAcceApiSlice';
 
 const Index: NextPage = () => {
-	const { data: StockInOuts, error, isLoading } = useGetStockInOutsQuery(undefined);
-	console.log('StockInOuts', StockInOuts);
+	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
+	
+	console.log('=== ACCESSORY BARCODE PAGE DEBUG ===');
+	console.log('All StockInOuts data:', StockInOuts);
+	console.log('Total records count:', StockInOuts?.length);
+	console.log('Records with barcodes:', StockInOuts?.filter((item: any) => item.barcode).length);
+	console.log('Accessory records:', StockInOuts?.filter((item: any) => item.type === 'Accessory').length);
+	console.log('stockIn records:', StockInOuts?.filter((item: any) => item.stock === 'stockIn').length);
+	console.log('Accessory stockIn records:', StockInOuts?.filter((item: any) => item.type === 'Accessory' && item.stock === 'stockIn').length);
+	console.log('Sample accessory records with barcodes:', StockInOuts?.filter((item: any) => item.barcode && item.type === 'Accessory').slice(0, 3));
+	
 	const [searchTerm, setSearchTerm] = useState('');
 	const [startDate, setStartDate] = useState<string>('');
 	const [endDate, setEndDate] = useState<string>('');

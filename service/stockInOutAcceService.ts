@@ -4,7 +4,11 @@ import { supabase } from '../lib/supabase';
 export const createstockIn = async (values: any) => {
   const status = true;
   const created_at = new Date(); // Supabase uses JS Date for timestamps
-  console.log(values)
+  
+  console.log("=== SERVICE: createstockIn DEBUG START ===");
+  console.log("Raw input values:", values);
+  console.log("Input barcode value:", values.barcode);
+  console.log("Input barcode type:", typeof values.barcode);
   
   // Handle numeric fields - convert empty strings to null or default values
   const processedValues = { ...values, status, created_at };
@@ -18,16 +22,28 @@ export const createstockIn = async (values: any) => {
   if (processedValues.cost) processedValues.cost = Number(processedValues.cost);
   if (processedValues.sellingPrice) processedValues.sellingPrice = Number(processedValues.sellingPrice);
   
+  console.log("=== SERVICE: Processed values before DB insert ===");
+  console.log("Processed values:", processedValues);
+  console.log("Final barcode value:", processedValues.barcode);
+  console.log("Final barcode type:", typeof processedValues.barcode);
+  
   const { data, error } = await supabase
     .from('StockAcce')
     .insert([processedValues])
     .select('id') // to return the inserted id
 
+  console.log("=== SERVICE: Database operation result ===");
+  console.log("Supabase insert data:", data);
+  console.log("Supabase insert error:", error);
+
   if (error) {
-    console.error('Error creating stock in:', error);
+    console.error('=== SERVICE: Error creating stock in ===');
+    console.error('Database error details:', error);
     return null;
   }
 
+  console.log("=== SERVICE: createstockIn DEBUG END ===");
+  console.log("Successfully created record with ID:", data?.[0]?.id);
   return data?.[0]?.id;
 };
 
