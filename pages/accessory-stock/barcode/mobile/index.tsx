@@ -17,15 +17,6 @@ import { useGetAllStockRecordsQuery } from '../../../../redux/slices/stockInOutA
 
 const Index: NextPage = () => {
 	const { data: StockInOuts, error, isLoading } = useGetAllStockRecordsQuery(undefined);
-	
-	console.log('=== BARCODE PAGE DEBUG ===');
-	console.log('All StockInOuts data:', StockInOuts);
-	console.log('Total records count:', StockInOuts?.length);
-	console.log('Records with barcodes:', StockInOuts?.filter((item: any) => item.barcode).length);
-	console.log('Mobile records:', StockInOuts?.filter((item: any) => item.type === 'Mobile').length);
-	console.log('stockIn records:', StockInOuts?.filter((item: any) => item.stock === 'stockIn').length);
-	console.log('Sample records with barcodes:', StockInOuts?.filter((item: any) => item.barcode).slice(0, 3));
-	
 	const [searchTerm, setSearchTerm] = useState('');
 	const [startDate, setStartDate] = useState<string>('');
 	const [endDate, setEndDate] = useState<string>('');
@@ -100,7 +91,7 @@ const Index: NextPage = () => {
 
 	const printLabels = (
 		price: string,
-		itemCode: string,
+		stockId: string,
 		barCodeNo: string,
 		itemName: string,
 		labelQuantity: number,
@@ -158,19 +149,19 @@ const Index: NextPage = () => {
 			^BY2,3,52^FT43,145^BCN,,N,N
 			^FH\^FD>;${barCodeNo}^FS
 			^FT43,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-			^FT43,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+			^FT43,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 	
 			^FT347,86^A0N,28,33^FH\^CI28^FDRs ${price}^FS^CI27
 			^BY2,3,52^FT307,145^BCN,,N,N
 			^FH\^FD>;${barCodeNo}^FS
 			^FT307,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-			^FT307,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+			^FT307,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 	
 			^FT610,86^A0N,28,33^FH\^CI28^FDRs ${price}^FS^CI27
 			^BY2,3,52^FT570,145^BCN,,N,N
 			^FH\^FD>;${barCodeNo}^FS
 			^FT570,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-			^FT570,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+			^FT570,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 			^PQ1,0,1,Y
 			^XZ
 			`;
@@ -186,7 +177,7 @@ const Index: NextPage = () => {
 			^BY2,3,52^FT43,145^BCN,,N,N
 			^FH\^FD>;${barCodeNo}^FS
 			^FT43,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-			^FT43,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+			^FT43,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 			`;
 
 					// Second label in the last row, if available
@@ -196,7 +187,7 @@ const Index: NextPage = () => {
 				^BY2,3,52^FT307,145^BCN,,N,N
 				^FH\^FD>;${barCodeNo}^FS
 				^FT307,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-				^FT307,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+				^FT307,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 				`;
 					}
 
@@ -207,7 +198,7 @@ const Index: NextPage = () => {
 				^BY2,3,52^FT570,145^BCN,,N,N
 				^FH\^FD>;${barCodeNo}^FS
 				^FT570,58^A0N,20,20^FH\^CI28^FD${itemName}^FS^CI27
-				^FT570,170^A0N,20,20^FH\^CI28^FDItem Code : ${itemCode}^FS^CI27
+				^FT570,170^A0N,20,20^FH\^CI28^FDStock ID : ${stockId}^FS^CI27
 				`;
 					}
 
@@ -336,7 +327,7 @@ const Index: NextPage = () => {
 												.map((brand: any, index: any) => (
 													<tr key={index}>
 														<td>{brand.date}</td>
-														<td>{brand.code}</td>
+														<td>{brand.id}</td>
 														<td>
 														{brand.brand} {' '}	{brand.model}
 														</td>
@@ -358,7 +349,7 @@ const Index: NextPage = () => {
 																onClick={() =>
 																	printLabels(
 																		brand.sellingPrice,
-																		brand.code,
+																		brand.id,
 																		brand.barcode,
 																		brand.brand +
 																			' ' +
