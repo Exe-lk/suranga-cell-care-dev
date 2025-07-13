@@ -472,6 +472,7 @@ const Index: NextPage = () => {
 											<th>Model name</th>
 											<th>Category Name</th>
 											<th>Brand Name</th>
+											<th>Description</th>
 											<th></th>
 										</tr>
 									</thead>
@@ -499,6 +500,7 @@ const Index: NextPage = () => {
 														<td>{model.name}</td>
 														<td>{model.category}</td>
 														<td>{model.brand}</td>
+														<td>{model.description || '-'}</td>
 														<td>
 															<Button
 																icon='Edit'

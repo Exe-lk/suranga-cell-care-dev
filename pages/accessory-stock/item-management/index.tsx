@@ -62,6 +62,18 @@ const Index: NextPage = () => {
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 	const type = [{ type: 'Accessory' }, { type: 'Mobile' }];
 	const [quantity, setQuantity] = useState<any>();
+	
+	// New filter states
+	const [selectedStockTypes, setSelectedStockTypes] = useState<string[]>([]);
+	const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+	const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+	const [selectedModels, setSelectedModels] = useState<string[]>([]);
+	
+	// Get unique values for filters from data
+	const uniqueStockTypes = Array.from(new Set(data.map((item: any) => item.mobileType).filter(Boolean))) as string[];
+	const uniqueCategories = Array.from(new Set(data.map((item: any) => item.category).filter(Boolean))) as string[];
+	const uniqueBrands = Array.from(new Set(data.map((item: any) => item.brand).filter(Boolean))) as string[];
+	const uniqueModels = Array.from(new Set(data.map((item: any) => item.model).filter(Boolean))) as string[];
 
 	useEffect(() => {
 		if (itemAcces?.lastDoc) {
@@ -289,6 +301,102 @@ const Index: NextPage = () => {
 											))}
 										</ChecksGroup>
 									</FormGroup>
+									{uniqueStockTypes.length > 0 && (
+										<FormGroup label='Stock Type' className='col-12'>
+											<ChecksGroup>
+												{uniqueStockTypes.map((stockType) => (
+													<Checks
+														key={stockType}
+														id={stockType}
+														label={stockType}
+														name={stockType}
+														value={stockType}
+														checked={selectedStockTypes.includes(stockType)}
+														onChange={(event: any) => {
+															const { checked, value } = event.target;
+															setSelectedStockTypes((prev) =>
+																checked
+																	? [...prev, value]
+																	: prev.filter((item) => item !== value),
+															);
+														}}
+													/>
+												))}
+											</ChecksGroup>
+										</FormGroup>
+									)}
+									{uniqueCategories.length > 0 && (
+										<FormGroup label='Category' className='col-12'>
+											<ChecksGroup>
+												{uniqueCategories.map((category) => (
+													<Checks
+														key={category}
+														id={category}
+														label={category}
+														name={category}
+														value={category}
+														checked={selectedCategories.includes(category)}
+														onChange={(event: any) => {
+															const { checked, value } = event.target;
+															setSelectedCategories((prev) =>
+																checked
+																	? [...prev, value]
+																	: prev.filter((item) => item !== value),
+															);
+														}}
+													/>
+												))}
+											</ChecksGroup>
+										</FormGroup>
+									)}
+									{uniqueBrands.length > 0 && (
+										<FormGroup label='Brand' className='col-12'>
+											<ChecksGroup>
+												{uniqueBrands.map((brand) => (
+													<Checks
+														key={brand}
+														id={brand}
+														label={brand}
+														name={brand}
+														value={brand}
+														checked={selectedBrands.includes(brand)}
+														onChange={(event: any) => {
+															const { checked, value } = event.target;
+															setSelectedBrands((prev) =>
+																checked
+																	? [...prev, value]
+																	: prev.filter((item) => item !== value),
+															);
+														}}
+													/>
+												))}
+											</ChecksGroup>
+										</FormGroup>
+									)}
+									{uniqueModels.length > 0 && (
+										<FormGroup label='Model' className='col-12'>
+											<ChecksGroup>
+												{uniqueModels.map((model) => (
+													<Checks
+														key={model}
+														id={model}
+														label={model}
+														name={model}
+														value={model}
+														checked={selectedModels.includes(model)}
+														onChange={(event: any) => {
+															const { checked, value } = event.target;
+															setSelectedModels((prev) =>
+																checked
+																	? [...prev, value]
+																	: prev.filter((item) => item !== value),
+															);
+														}}
+													/>
+												))}
+											</ChecksGroup>
+										</FormGroup>
+									)}
 								</div>
 							</div>
 						</DropdownMenu>
@@ -452,6 +560,26 @@ const Index: NextPage = () => {
 												?.filter((itemAcces: any) =>
 													selectedUsers.length > 0
 														? selectedUsers.includes(itemAcces.type)
+														: true,
+												)
+												.filter((itemAcces: any) =>
+													selectedStockTypes.length > 0
+														? selectedStockTypes.includes(itemAcces.mobileType)
+														: true,
+												)
+												.filter((itemAcces: any) =>
+													selectedCategories.length > 0
+														? selectedCategories.includes(itemAcces.category)
+														: true,
+												)
+												.filter((itemAcces: any) =>
+													selectedBrands.length > 0
+														? selectedBrands.includes(itemAcces.brand)
+														: true,
+												)
+												.filter((itemAcces: any) =>
+													selectedModels.length > 0
+														? selectedModels.includes(itemAcces.model)
 														: true,
 												)
 												.map((itemAcces: any, index: any) => (
