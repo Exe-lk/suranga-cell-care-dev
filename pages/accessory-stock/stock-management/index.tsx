@@ -408,6 +408,7 @@ const Index: NextPage = () => {
 											<th>Model</th>
 											<th>Quantity</th>
 											<th>Selling Price</th>
+											<th>Cost</th>
 											<th>Description</th>
 											<th>Stock</th>
 										</tr>
@@ -415,12 +416,12 @@ const Index: NextPage = () => {
 									<tbody>
 										{isLoading && (
 											<tr>
-												<td colSpan={9}>Loading...</td>
+												<td colSpan={10}>Loading...</td>
 											</tr>
 										)}
 										{error && (
 											<tr>
-												<td colSpan={9}>Error fetching stocks.</td>
+												<td colSpan={10}>Error fetching stocks.</td>
 											</tr>
 										)}
 										{filteredTransactions && filteredTransactions.length > 0 ? (
@@ -447,6 +448,7 @@ const Index: NextPage = () => {
 														<td>{brand.model}</td>
 														<td>{brand.quantity}</td>
 														<td>{brand.sellingPrice?.toFixed(2)}</td>
+														<td>{brand.cost?.toFixed(2)}</td>
 														<td>{brand.description}</td>
 														<td>{brand.stock}</td>
 													</tr>
@@ -454,7 +456,7 @@ const Index: NextPage = () => {
 											})
 										) : (
 											<tr>
-												<td colSpan={9} className="text-center py-4">
+												<td colSpan={10} className="text-center py-4">
 													No matching records found.
 													{selectedUsers.length > 0 && selectedUsers.length < 2 && (
 														<span> Current filters: <strong>{selectedUsers.join(', ')}</strong></span>

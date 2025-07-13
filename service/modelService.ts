@@ -106,13 +106,13 @@
 // };
 import { supabase } from '../lib/supabase';
 
-export const createModel = async (name: string, brand: string, category: string) => {
+export const createModel = async (name: string, brand: string, category: string, description: string) => {
   const status = true;
   const timestamp = new Date();
 
   const { data, error } = await supabase
     .from('ModelDisplay')
-    .insert([{ name, brand, category, status }])
+    .insert([{ name, brand, category, description, status }])
     .select()
     .single();
 

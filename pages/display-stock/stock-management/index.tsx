@@ -682,6 +682,7 @@ const Index: NextPage = () => {
 										<tr>
 											<th>Date</th>
 											<th>Code</th>
+											<th>Barcode</th>
 											<th>Category</th>
 											<th>Brand</th>
 											<th>Model</th>
@@ -718,6 +719,7 @@ const Index: NextPage = () => {
 													<tr key={index}>
 														<td>{brand.date}</td>
 														<td>{brand.code}</td>
+														<td>{brand.barcode}</td>
 														<td>{brand.category}</td>
 														<td>{brand.brand}</td>
 														<td>{brand.model}</td>

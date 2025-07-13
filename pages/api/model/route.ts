@@ -11,12 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (req.method) {
       case 'POST': {
-        const { name, brand, category } = req.body;
+        const { name, brand, category, description } = req.body;
         if (!name) {
           res.status(400).json({ error: 'Name is required' });
           return;
         }
-        const id = await createModel(name, brand, category);
+        const id = await createModel(name, brand, category, description);
         res.status(201).json({ message: 'Model created', id });
         break;
       }

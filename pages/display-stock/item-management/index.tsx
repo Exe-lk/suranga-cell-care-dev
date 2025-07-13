@@ -48,6 +48,8 @@ const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+	const [categoryFilter, setCategoryFilter] = useState<string>('');
+	const [brandFilter, setBrandFilter] = useState<string>('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [returnModalStatus, setReturnModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
@@ -431,6 +433,26 @@ const Index: NextPage = () => {
 						value={searchTerm}
 						ref={inputRef}
 					/>
+					<select
+						className='form-select me-2'
+						value={categoryFilter}
+						onChange={(e) => setCategoryFilter(e.target.value)}
+						style={{ minWidth: '120px' }}>
+						<option value=''>All Categories</option>
+						<option value='Display'>Display</option>
+						<option value='Battery'>Battery</option>
+						<option value='Screens'>Screens</option>
+					</select>
+					<select
+						className='form-select me-2'
+						value={brandFilter}
+						onChange={(e) => setBrandFilter(e.target.value)}
+						style={{ minWidth: '120px' }}>
+						<option value=''>All Brands</option>
+						{itemDiss?.map((item: any) => item.brand).filter((brand: string, index: number, arr: string[]) => arr.indexOf(brand) === index).map((brand: string) => (
+							<option key={brand} value={brand}>{brand}</option>
+						))}
+					</select>
 				</SubHeaderLeft>
 				<SubHeaderRight>
 					{showLowStockAlert && (
@@ -587,6 +609,17 @@ const Index: NextPage = () => {
 											)}
 											{itemDiss &&
 												dataPagination(itemDiss, currentPage, perPage)
+													.filter((item: any) => {
+														// Apply category filter
+														if (categoryFilter && item.category !== categoryFilter) {
+															return false;
+														}
+														// Apply brand filter
+														if (brandFilter && item.brand !== brandFilter) {
+															return false;
+														}
+														return true;
+													})
 													.map((item: any, index: any) => (
 														<React.Fragment key={index}>
 															<tr key={index} style={getRowStyle(item)}>

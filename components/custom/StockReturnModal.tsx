@@ -163,12 +163,14 @@ const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quant
 		initialValues: {
 			itemId: '',
 			condition: '',
+			reason: '',
 		},
 		enableReinitialize: true,
 		validate: (values) => {
 			const errors: {
 				itemId?: string;
 				condition?: string;
+				reason?: string;
 			} = {};
 
 			if (!values.itemId) {
@@ -176,6 +178,9 @@ const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quant
 			}
 			if (!condition) {
 				errors.condition = 'Condition is required';
+			}
+			if (!values.reason) {
+				errors.reason = 'Reason is required';
 			}
 			return errors;
 		},
@@ -221,6 +226,7 @@ const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quant
 					category: item.category || '',
 					model: item.model || '',
 					condition: condition,
+					reason: values.reason,
 					date: formattedDate,
 				};
 
@@ -316,7 +322,6 @@ const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quant
 										top: '100%',
 										left: 0,
 										right: 0,
-										backgroundColor: 'white',
 										border: '1px solid #dee2e6',
 										borderRadius: '0.375rem',
 										maxHeight: '300px',
@@ -409,6 +414,20 @@ const StockReturnModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quant
 								checked={condition === 'Bad'}
 							/>
 						</ChecksGroup>
+					</FormGroup>
+					<FormGroup id='reason' label='Reason' className='col-md-12'>
+						<Input
+							type='text'
+							placeholder='Enter return reason...'
+							value={formik.values.reason}
+							onChange={formik.handleChange}
+							onBlur={formik.handleBlur}
+							name='reason'
+							isValid={formik.isValid}
+							isTouched={formik.touched.reason}
+							invalidFeedback={formik.errors.reason}
+							validFeedback='Looks good!'
+						/>
 					</FormGroup>
 				</div>
 			</ModalBody>
