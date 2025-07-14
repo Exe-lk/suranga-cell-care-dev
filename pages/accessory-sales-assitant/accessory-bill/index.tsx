@@ -868,10 +868,8 @@ function index() {
 		discount: any,
 		quentity: number,
 	) => {
-		if (price <= discount) {
-			Swal.fire('Warning..!', 'Insufficient Item', 'error');
-			discount = 0;
-		}
+		// Remove the incorrect validation that prevents entering selling prices
+		// Allow any selling price to be entered
 		setOrderedItems((prevItems) =>
 			prevItems.map(
 				(item, i) =>

@@ -79,9 +79,42 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const { data: stockInOuts } = useGetStockInOutsQuery(undefined);
 	const [generatedCode, setGeneratedCode] = useState('');
 	const [generatedbarcode, setGeneratedBarcode] = useState<any>();
+	const [stockInCode, setStockInCode] = useState(''); // New state for 6-digit stock-in code
 	const nowQuantity = quantity;
 	const [imageurl, setImageurl] = useState<any>(null);
 	const { data: dealers } = useGetDealersQuery(undefined);
+
+	// Function to generate 6-digit stock-in code sequentially
+	const generateStockInCode = (existingStockInOuts: any[]) => {
+		if (!existingStockInOuts || existingStockInOuts.length === 0) {
+			return 100000; // Start from 100000 if no existing records
+		}
+
+		// Find the highest 6-digit code from existing stock-in records
+		const existingCodes = existingStockInOuts
+			.filter((item: any) => item.stock === 'stockIn' && item.code)
+			.map((item: any) => {
+				const code = item.code?.toString() || '';
+				// Extract numeric part - handle both pure numbers and codes with prefixes
+				const numericMatch = code.match(/\d+$/);
+				return numericMatch ? parseInt(numericMatch[0], 10) : 0;
+			})
+			.filter((code: number) => code >= 100000 && code <= 999999); // Only consider 6-digit codes
+
+		if (existingCodes.length === 0) {
+			return 100000; // Start from 100000 if no valid 6-digit codes found
+		}
+
+		const maxCode = Math.max(...existingCodes);
+		const nextCode = maxCode + 1;
+		
+		// Ensure it's a 6-digit number
+		if (nextCode > 999999) {
+			throw new Error('Maximum 6-digit code reached (999999)');
+		}
+		
+		return nextCode;
+	};
 
 	useEffect(() => {
 		console.log("=== BARCODE GENERATION DEBUG START ===");
@@ -91,13 +124,17 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		
 		if (isSuccess && stockInData) {
 			setStockIn(stockInData);
-			// Use the item's existing code column value
+			// Use the item's existing code column value for item code
 			setGeneratedCode(stockInData.code);
+			// Generate a new sequential 6-digit code for stock-in
+			const newStockInCode = generateStockInCode(stockInOuts || []);
+			setStockInCode(newStockInCode.toString());
 			console.log("Using item's code from database:", stockInData.code);
+			console.log("Generated sequential 6-digit stock-in code:", newStockInCode);
 		}
 		
 		console.log("=== BARCODE GENERATION DEBUG END ===");
-	}, [isSuccess, stockInData, isOpen]);
+	}, [isSuccess, stockInData, isOpen, stockInOuts]);
 
 	const handleUploadimage = async () => {
 		if (imageurl) {
@@ -272,48 +309,33 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					return; // Stop the submission process
 				}
 				
-				// 2. Prepare data for API - Use temporary barcode first
-				const temporaryBarcode = `TEMP_${Date.now()}`;
-				
+				// 2. Prepare data for API - Use the 6-digit stock-in code
 				const submissionData = {
 					...values,
-					barcode: temporaryBarcode,
+					code: stockInCode, // Use the 6-digit stock-in code instead of item code
+					barcode: `${generatedCode}${stockInCode}`, // Use 4-digit item code + 6-digit stock-in code
 					NIC_Photo: url,
 				};
 				
-				console.log("=== SUBMISSION WITH TEMPORARY BARCODE ===");
-				console.log("Temporary barcode:", temporaryBarcode);
-				console.log("Generated code:", generatedCode);
+				console.log("=== SUBMISSION WITH 6-DIGIT CODE ===");
+				console.log("6-digit stock-in code:", stockInCode);
+				console.log("Item's original code (4 digits):", generatedCode);
+				console.log("Generated barcode (4+6 digits):", submissionData.barcode);
 				
 				try {
-					// 3. Add the stock-in record and get the ID
+					// 3. Add the stock-in record with the 6-digit code
 					console.log("Sending to API:", submissionData);
 					const response = await addstockIn(submissionData).unwrap();
 					console.log("=== API RESPONSE ===");
 					console.log("Stock in response:", response);
 					
-					// 4. Get the stockin ID and create the proper barcode
-					const stockinId = response.id;
-					const finalBarcode = `${generatedCode}${stockinId}`;
-					
+					// 4. The barcode is already correct, no need to update it
 					console.log("=== FINAL BARCODE GENERATION ===");
-					console.log("Stockin ID:", stockinId);
-					console.log("Item's Code from database:", generatedCode);
-					console.log("Final barcode (Item Code + Stockin ID):", finalBarcode);
+					console.log("Stockin ID:", response);
+					console.log("6-digit Stock-in Code:", stockInCode);
+					console.log("Final barcode:", submissionData.barcode);
 					
-					// 5. Update the record with the correct barcode
-					await fetch('/api/stockInOutAcce/update-barcode', {
-						method: 'PUT',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify({
-							id: stockinId,
-							barcode: finalBarcode,
-						}),
-					});
-					
-					// 6. Update the item quantity
+					// 5. Update the item quantity
 					if (stockIn?.id) {
 						const currentQuantity = parseInt(stockIn.quantity || '0', 10);
 						const addedQuantity = parseInt(values.quantity || '0', 10);
@@ -329,12 +351,12 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 						});
 					}
 					
-					// 7. Refresh data and show success
+					// 6. Refresh data and show success
 					await refetch();
 					await Swal.fire({
 						icon: 'success',
 						title: 'Stock In Added Successfully',
-						text: `Barcode: ${finalBarcode}`,
+						text: `Barcode: ${submissionData.barcode}`,
 					});
 					formik.resetForm();
 					setIsOpen(false);
@@ -381,7 +403,16 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			</ModalHeader>
 			<ModalBody className='px-4'>
 				<div className='row g-4'>
-					<FormGroup id='code' label='Item Code' className='col-md-6'>
+					<FormGroup id='code' label='Stock-In Code (6 digits)' className='col-md-6'>
+						<Input
+							type='text'
+							value={stockInCode || 'Generating...'}
+							readOnly
+							isValid={formik.isValid}
+							isTouched={formik.touched.code}
+						/>
+					</FormGroup>
+					<FormGroup id='itemCode' label='Item Code' className='col-md-6'>
 						<Input
 							type='text'
 							value={generatedCode || 'Loading...'}

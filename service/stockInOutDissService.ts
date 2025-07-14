@@ -361,4 +361,25 @@ export const createstockIn = async (values: any) => {
   
 	return newStock[0].id;
   };
+
+export const getStockOutByTechnician = async (technicianId: string) => {
+	try {
+		const { data, error } = await supabase
+			.from('Stock')
+			.select('*')
+			.eq('technicianNum', technicianId)
+			.eq('stock', 'stockOut')
+			.eq('status', true);
+
+		if (error) {
+			console.error('Error fetching stock out by technician:', error);
+			throw error;
+		}
+
+		return data;
+	} catch (error) {
+		console.error('Error fetching stock out by technician:', error);
+		throw error;
+	}
+};
   
