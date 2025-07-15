@@ -220,6 +220,53 @@ const Index: NextPage = () => {
 		}
 	};
 
+	const exportToCSV = (data: any[], filename = "items.csv") => {
+		if (!data || data.length === 0) return;
+
+		// Define the CSV headers
+		const headers = [
+			"brand",
+			"category",
+			"code",
+			"created_at",
+			"description",
+			"id",
+			"mobileType",
+			"model",
+			"quantity",
+			"reorderLevel",
+			"status",
+			"type",
+			"warranty"
+		];
+
+		// Create CSV rows
+		const csvRows = [
+			headers.join(","), // header row
+			...data.map(item =>
+				headers.map(header => {
+					let value = item[header];
+					// Escape quotes and commas
+					if (typeof value === "string") {
+						value = `"${value.replace(/"/g, '""')}"`;
+					}
+					return value;
+				}).join(",")
+			)
+		];
+
+		// Create a Blob and trigger download
+		const csvContent = csvRows.join("\n");
+		const blob = new Blob([csvContent], { type: "text/csv" });
+		const url = URL.createObjectURL(blob);
+
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
 	if (isLoading) {
 		console.log(isLoading);
 		return (
@@ -503,27 +550,13 @@ const Index: NextPage = () => {
 								<div className='flex-grow-1 text-center text-primary'>
 									Manage Stock
 								</div>
-								{/* <Dropdown>
-									<DropdownToggle hasIcon={false}>
-										<Button icon='UploadFile' color='warning'>
-											Export
-										</Button>
-									</DropdownToggle>
-									<DropdownMenu isAlignmentEnd>
-										<DropdownItem onClick={() => handleExport('svg')}>
-											Download SVG
-										</DropdownItem>
-										<DropdownItem onClick={() => handleExport('png')}>
-											Download PNG
-										</DropdownItem>
-										<DropdownItem onClick={() => handleExport('csv')}>
-											Download CSV
-										</DropdownItem>
-										<DropdownItem onClick={() => handleExport('pdf')}>
-											Download PDF
-										</DropdownItem>
-									</DropdownMenu>
-								</Dropdown> */}
+								<Button
+									icon='UploadFile'
+									color='warning'
+									onClick={() => exportToCSV(data)}
+								>
+									Export CSV
+								</Button>
 							</CardTitle>
 							<CardBody isScrollable className='table-responsive'>
 								<table className='table  table-bordered border-primary table-hover text-center'>
