@@ -327,7 +327,7 @@ const Index: NextPage = () => {
 												.map((brand: any, index: any) => (
 													<tr key={index}>
 														<td>{brand.date}</td>
-														<td>{brand.id}</td>
+														<td>{brand.code}</td>
 														<td>
 														{brand.brand} {' '}	{brand.model}
 														</td>
@@ -349,7 +349,7 @@ const Index: NextPage = () => {
 																onClick={() =>
 																	printLabels(
 																		brand.sellingPrice,
-																		brand.id,
+																		brand.code,
 																		brand.barcode,
 																		brand.brand +
 																			' ' +
