@@ -7,12 +7,13 @@ import FormGroup from '../bootstrap/forms/FormGroup';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
 import { useAddStockInMutation } from '../../redux/slices/stockInOutAcceApiSlice';
-import { useGetItemAcceByIdQuery, useUpdateItemAcceMutation } from '../../redux/slices/itemManagementAcceApiSlice';
+import { useGetItemAcceByIdQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetSuppliersQuery } from '../../redux/slices/supplierApiSlice';
 import { useGetDealersQuery } from '../../redux/slices/delearApiSlice';
+import { useUpdateItemAcceMutation } from '../../redux/slices/itemManagementAcceApiSlice';
 import Select from '../bootstrap/forms/Select';
 import { supabase } from '../../lib/supabase';
 
@@ -44,9 +45,6 @@ interface StockIn {
 	status: boolean;
 	sellingPrice: Number;
 	imi: string;
-	reorderLevel: string;
-	warranty: string;
-	description: string;
 }
 
 const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
@@ -70,9 +68,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		sellingPrice: 0,
 		barcode: 0,
 		imi: '',
-		reorderLevel: '',
-		warranty: '',
-		description: '',
 	});
 	const {
 		data: suppliers,
@@ -82,6 +77,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const { data: stockInData, isSuccess } = useGetItemAcceByIdQuery(id);
 	const [addstockIn, { isLoading }] = useAddStockInMutation();
 	const [updateStockInOut] = useUpdateStockInOutMutation();
+	const [updateItemAcce] = useUpdateItemAcceMutation();
 	const { data: stockInOuts } = useGetStockInOutsQuery(undefined);
 	const [generatedCode, setGeneratedCode] = useState('');
 	const [generatedbarcode, setGeneratedBarcode] = useState<any>();
@@ -89,7 +85,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const nowQuantity = quantity;
 	const [imageurl, setImageurl] = useState<any>(null);
 	const { data: dealers } = useGetDealersQuery(undefined);
-	const [updateItemAcce] = useUpdateItemAcceMutation();
 
 	// Function to generate 6-digit stock-in code sequentially
 	const generateStockInCode = (existingStockInOuts: any[]) => {
@@ -342,15 +337,15 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					console.log("6-digit Stock-in Code:", stockInCode);
 					console.log("Final barcode:", submissionData.barcode);
 					
-					// 5. Update the item quantity by adding the new quantity to existing quantity
+					// 5. Update the item quantity in ItemManagementAcce table
 					if (stockIn?.id) {
 						const currentQuantity = parseInt(stockIn.quantity || '0', 10);
 						const addedQuantity = parseInt(values.quantity || '0', 10);
 						const newQuantity = (currentQuantity + addedQuantity).toString();
 						
-						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity} (added ${addedQuantity})`);
+						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity}`);
 						
-						// Call the update API to update the item quantity using the correct mutation
+						// Call the correct API to update the item quantity in ItemManagementAcce table
 						await updateItemAcce({
 							id: stockIn.id,
 							type: stockIn.type,
@@ -359,11 +354,8 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 							model: stockIn.model,
 							quantity: newQuantity,
 							brand: stockIn.brand,
-							reorderLevel: stockIn.reorderLevel,
-							description: stockIn.description,
 							code: stockIn.code,
 							status: stockIn.status,
-							warranty: stockIn.warranty
 						});
 					}
 					
