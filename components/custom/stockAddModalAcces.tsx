@@ -7,7 +7,7 @@ import FormGroup from '../bootstrap/forms/FormGroup';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
 import { useAddStockInMutation } from '../../redux/slices/stockInOutAcceApiSlice';
-import { useGetItemAcceByIdQuery } from '../../redux/slices/itemManagementAcceApiSlice';
+import { useGetItemAcceByIdQuery, useUpdateItemAcceMutation } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutAcceApiSlice';
@@ -44,6 +44,9 @@ interface StockIn {
 	status: boolean;
 	sellingPrice: Number;
 	imi: string;
+	reorderLevel: string;
+	warranty: string;
+	description: string;
 }
 
 const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
@@ -67,6 +70,9 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		sellingPrice: 0,
 		barcode: 0,
 		imi: '',
+		reorderLevel: '',
+		warranty: '',
+		description: '',
 	});
 	const {
 		data: suppliers,
@@ -83,6 +89,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const nowQuantity = quantity;
 	const [imageurl, setImageurl] = useState<any>(null);
 	const { data: dealers } = useGetDealersQuery(undefined);
+	const [updateItemAcce] = useUpdateItemAcceMutation();
 
 	// Function to generate 6-digit stock-in code sequentially
 	const generateStockInCode = (existingStockInOuts: any[]) => {
@@ -335,19 +342,28 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					console.log("6-digit Stock-in Code:", stockInCode);
 					console.log("Final barcode:", submissionData.barcode);
 					
-					// 5. Update the item quantity
+					// 5. Update the item quantity by adding the new quantity to existing quantity
 					if (stockIn?.id) {
 						const currentQuantity = parseInt(stockIn.quantity || '0', 10);
 						const addedQuantity = parseInt(values.quantity || '0', 10);
 						const newQuantity = (currentQuantity + addedQuantity).toString();
 						
-						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity}`);
+						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity} (added ${addedQuantity})`);
 						
-						// Call the update API to update the item quantity
-						await updateStockInOut({
+						// Call the update API to update the item quantity using the correct mutation
+						await updateItemAcce({
 							id: stockIn.id,
+							type: stockIn.type,
+							mobileType: stockIn.mobileType,
+							category: stockIn.category,
+							model: stockIn.model,
 							quantity: newQuantity,
-							type: stockIn.type
+							brand: stockIn.brand,
+							reorderLevel: stockIn.reorderLevel,
+							description: stockIn.description,
+							code: stockIn.code,
+							status: stockIn.status,
+							warranty: stockIn.warranty
 						});
 					}
 					
