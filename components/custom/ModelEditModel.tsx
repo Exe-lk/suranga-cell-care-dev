@@ -75,10 +75,11 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 				await refetch();
 										
 												const existingModel = ModelData?.find(
-													(brand: { name: string; category: string ,brand:string}) =>
-														brand.name.toLowerCase() === trimmedValues.name.toLowerCase() &&
-														brand.category.toLowerCase() === trimmedValues.category.toLowerCase() &&
-														brand.brand.toLowerCase() === trimmedValues.brand.toLowerCase(),
+													(model: { id: string; name: string; category: string; brand: string }) =>
+														model.id !== id && // Exclude the current model being edited
+														model.name.toLowerCase() === trimmedValues.name.toLowerCase() &&
+														model.category.toLowerCase() === trimmedValues.category.toLowerCase() &&
+														model.brand.toLowerCase() === trimmedValues.brand.toLowerCase(),
 												);
 												
 										
