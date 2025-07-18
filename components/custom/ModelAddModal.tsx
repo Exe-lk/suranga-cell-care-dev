@@ -90,6 +90,7 @@ const ModelAddModal: FC<ModelAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						...values,
 						brand: values.brand,
 						category: values.category,
+						description: values.description,
 					}).unwrap();
 					refetch();
 					await Swal.fire({

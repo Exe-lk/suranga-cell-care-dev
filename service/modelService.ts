@@ -172,6 +172,7 @@ export const updateModel = async (
   name: string,
   brand: string,
   category: string,
+  description: string,
   status: boolean
 ) => {
   const { data: modelData, error: modelError } = await supabase
@@ -189,7 +190,7 @@ export const updateModel = async (
 
   await supabase
     .from('ModelDisplay')
-    .update({ name, brand, category, status })
+    .update({ name, brand, category, description, status })
     .eq('id', id);
 
   const { data: itemDocs, error: itemError } = await supabase

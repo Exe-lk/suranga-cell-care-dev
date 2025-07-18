@@ -212,6 +212,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				// Clone values and ensure numeric fields are properly formatted
 				const processedValues = {
 					...values,
+					itemId: id, // Add the item ID to the stock out data
 					quantity: Number(values.quantity),
 					sellingPrice: Number(values.sellingPrice),
 					cost: values.cost ? Number(values.cost) : null,

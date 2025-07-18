@@ -40,6 +40,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 			name: modelToEdit?.name || '',
 			category: modelToEdit?.category || '',
 			brand: modelToEdit?.brand || '',
+			description: modelToEdit?.description || '',
 		},
 		enableReinitialize: true,
 		validate: (values) => {
@@ -47,6 +48,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 				name?: string;
 				category?: string;
 				brand?: string;
+				description?: string;
 			} = {};
 			if (!values.name) {
 				errors.name = 'Required';
@@ -100,6 +102,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 						name: values.name,
 						category: values.category,
 						brand: values.brand,
+						description: values.description,
 						status: true,
 						id: id,
 					};
@@ -212,6 +215,19 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 								),
 							)}
 						</Select>
+					</FormGroup>
+					<FormGroup id='description' label='Description' className='col-md-12'>
+						<Input
+							name='description'
+							value={formik.values.description}
+							onChange={formik.handleChange}
+							onBlur={formik.handleBlur}
+							placeholder='Enter model description'
+							isValid={formik.isValid}
+							isTouched={formik.touched.description}
+							invalidFeedback={formik.errors.description}
+							validFeedback='Looks good!'
+						/>
 					</FormGroup>
 				</div>
 			</ModalBody>
