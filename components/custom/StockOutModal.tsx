@@ -11,7 +11,6 @@ import Button from '../bootstrap/Button';
 import Select from '../bootstrap/forms/Select';
 import Swal from 'sweetalert2';
 import Checks, { ChecksGroup } from '../bootstrap/forms/Checks';
-import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 
 interface StockAddModalProps {
@@ -82,7 +81,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	} = useGetStockInOutsQuery(undefined);
 	const [addstockOut] = useAddStockOutMutation();
 	const { data: stockOutData, isSuccess } = useGetItemAcceByIdQuery(id);
-	const [updateStockInOut] = useUpdateStockInOutMutation();
 
 	useEffect(() => {
 		if (isSuccess && stockOutData) {
@@ -223,7 +221,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				
 				const response = await addstockOut(processedValues).unwrap();
 				console.log("Stock-out created response:", response);
-				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
 				await refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });
 				formik.resetForm();
