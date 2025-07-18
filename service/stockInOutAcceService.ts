@@ -161,6 +161,52 @@ export const createstockOut = async (values: any) => {
 	}
 
 	console.log('Stock out created with ID:', data?.[0]?.id);
+
+	// Update ItemManagementAcce table quantity
+	try {
+		// Find the corresponding item in ItemManagementAcce table
+		const { data: itemData, error: itemError } = await supabase
+			.from('ItemManagementAcce')
+			.select('*')
+			.eq('barcode', processedValues.barcode)
+			.eq('model', processedValues.model)
+			.eq('brand', processedValues.brand)
+			.eq('category', processedValues.category)
+			.eq('status', true)
+			.single();
+
+		if (itemError) {
+			console.error('Error finding item in ItemManagementAcce:', itemError);
+			// Don't throw error here as stock out was already created
+			return data?.[0]?.id;
+		}
+
+		if (itemData) {
+			// Calculate new quantity
+			const currentQuantity = Number(itemData.quantity) || 0;
+			const stockOutQuantity = Number(processedValues.quantity) || 0;
+			const newQuantity = Math.max(0, currentQuantity - stockOutQuantity);
+
+			// Update the quantity in ItemManagementAcce table
+			const { error: updateError } = await supabase
+				.from('ItemManagementAcce')
+				.update({ quantity: newQuantity.toString() })
+				.eq('id', itemData.id);
+
+			if (updateError) {
+				console.error('Error updating ItemManagementAcce quantity:', updateError);
+				// Don't throw error here as stock out was already created
+			} else {
+				console.log(`Successfully updated ItemManagementAcce quantity for item ${itemData.id} from ${currentQuantity} to ${newQuantity}`);
+			}
+		} else {
+			console.warn('No matching item found in ItemManagementAcce table for stock out');
+		}
+	} catch (error) {
+		console.error('Error updating ItemManagementAcce quantity:', error);
+		// Don't throw error here as stock out was already created
+	}
+
 	return data?.[0]?.id;
 };
 

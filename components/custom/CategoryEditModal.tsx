@@ -123,7 +123,7 @@ const CategoryEditModal: FC<CategoryEditModalProps> = ({ id, isOpen, setIsOpen }
 						await Promise.all(
 							modelsToUpdate.map((model: any) =>
 								updateModel(
-									model.id, model.name, model.brand, values.name.trim(), model.status)
+									model.id, model.name, model.brand, values.name.trim(), model.status, model.description || '')
 							)
 						);
 					}
