@@ -135,48 +135,6 @@ export const updatestockIn = async (id: string, quantity: string) => {
 	}
 };
 
-// Update Quantity in ItemManagementAcce Table for Stock Out
-export const updateItemQuantityForStockOut = async (itemId: string, stockOutQuantity: number) => {
-	try {
-		// First get the current item to ensure it exists and get current quantity
-		const { data: item, error: getError } = await supabase
-			.from('ItemManagementAcce')
-			.select('*')
-			.eq('id', itemId)
-			.single();
-
-		if (getError) {
-			console.error('Error fetching item before stock out update:', getError);
-			throw getError;
-		}
-
-		if (!item) {
-			throw new Error(`Item with ID ${itemId} not found`);
-		}
-
-		// Calculate new quantity (current quantity - stock out quantity)
-		const currentQuantity = Number(item.quantity) || 0;
-		const newQuantity = Math.max(0, currentQuantity - stockOutQuantity);
-
-		// Update the item quantity
-		const { error } = await supabase
-			.from('ItemManagementAcce')
-			.update({ quantity: newQuantity.toString() })
-			.eq('id', itemId);
-
-		if (error) {
-			console.error('Error updating quantity for stock out:', error);
-			throw error;
-		}
-
-		console.log(`Successfully updated quantity for item ${itemId}: ${currentQuantity} - ${stockOutQuantity} = ${newQuantity}`);
-		return true;
-	} catch (error) {
-		console.error('Error in updateItemQuantityForStockOut:', error);
-		throw error;
-	}
-};
-
 export const createstockOut = async (values: any) => {
 	console.log('Creating stock out with original values:', values);
 
@@ -195,24 +153,11 @@ export const createstockOut = async (values: any) => {
 
 	console.log('Inserting stock out with processed values:', processedValues);
 
-	// Start a transaction to ensure both operations succeed or fail together
 	const { data, error } = await supabase.from('StockAcce').insert([processedValues]).select('id');
 
 	if (error) {
 		console.error('Error creating stock out:', error);
 		throw error;
-	}
-
-	// Update the item quantity in ItemManagementAcce table
-	if (processedValues.itemId && processedValues.quantity) {
-		try {
-			await updateItemQuantityForStockOut(processedValues.itemId, processedValues.quantity);
-			console.log('Item quantity updated successfully for stock out');
-		} catch (updateError) {
-			console.error('Error updating item quantity for stock out:', updateError);
-			// Optionally, you might want to delete the stock out record if quantity update fails
-			// For now, we'll let the stock out record exist but log the error
-		}
 	}
 
 	console.log('Stock out created with ID:', data?.[0]?.id);
