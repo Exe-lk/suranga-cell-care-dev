@@ -37,7 +37,7 @@ const formatTimestamp = (seconds: number, nanoseconds: number): string => {
 };
 
 interface StockOut {
-	cid: string;
+	id: string;
 	model: string;
 	brand: string;
 	category: string;
@@ -56,7 +56,7 @@ interface StockOut {
 
 const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
 	const [stockOut, setStockOut] = useState<StockOut>({
-		cid: '',
+		id: '',
 		model: '',
 		brand: '',
 		category: '',
@@ -91,7 +91,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	// Filter for accessory stock-in items only
 	const filteredStockIn = stockInData?.filter(
 		(item: { stock: string; type: string }) => 
-			item.stock === 'stockIn' && item.type === 'Accessory',
+			item.stock === 'stockIn',
 	);
 
 	const handleBarcodeSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +107,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 };
 
 	const stockInQuantity = quantity;
-
 	const formik = useFormik({
 		initialValues: {
 			brand: stockOut.brand,
@@ -210,6 +209,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				// Clone values and ensure numeric fields are properly formatted
 				const processedValues = {
 					...values,
+					id: id, // include id for backend to update item quantity
 					quantity: Number(values.quantity),
 					sellingPrice: Number(values.sellingPrice),
 					cost: values.cost ? Number(values.cost) : null,
@@ -220,6 +220,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				console.log("Submitting stock-out with values:", processedValues);
 				
 				const response = await addstockOut(processedValues).unwrap();
+
 				console.log("Stock-out created response:", response);
 				await refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });

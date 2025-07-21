@@ -14,7 +14,7 @@ export const stockInOutAcceApiSlice = createApi({
       providesTags: ['StockInOutAcce'],
     }),
     getAllStockRecords: builder.query({
-      query: () => `stockInOutAcce/route1`, // No parameters to get everything
+      query: () => `stockInOutAcce/route1`, 
       providesTags: ['StockInOutAcce'],
     }),
     getStockInOutByDate: builder.query({
