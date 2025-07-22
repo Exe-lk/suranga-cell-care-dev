@@ -163,6 +163,9 @@ function index() {
 		
 		// Format the contact number consistently
 		const normalizedInput = normalizeContact(value);
+		if (value.length > 1 && value.startsWith('0')) {
+			value = value.substring(1);
+		}
 		setContact(value);
 		
 		console.log('Contact search value (normalized):', normalizedInput);
@@ -759,16 +762,17 @@ function index() {
 						const id = cid;
 						const barcodePrefix = barcode.slice(0, 4);
 
-						const matchingItem = itemAcces?.find(
-							(accessItem: any) => accessItem.code === barcodePrefix,
+						const matchingItem = await itemAcces?.find(
+							(accessItem: any) => accessItem.code == barcodePrefix,
 						);
-						// console.log(matchingItem);
+						console.log(matchingItem);
 						if (matchingItem) {
 							const quantity1 = matchingItem.quantity;
 
 							const updatedQuantity = quantity1 - quantity;
 							try {
-								// Call the updateStockInOut function to update the stock
+						console.log(id)
+						console.log(updatedQuantity)
 								await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
 							} catch (error) {
 								console.error(`Failed to update stock for ID: ${id}`, error);
@@ -868,8 +872,10 @@ function index() {
 		discount: any,
 		quentity: number,
 	) => {
-		// Remove the incorrect validation that prevents entering selling prices
-		// Allow any selling price to be entered
+		if (price <= discount) {
+			Swal.fire('Warning..!', 'Insufficient Item', 'error');
+			discount = 0;
+		}
 		setOrderedItems((prevItems) =>
 			prevItems.map(
 				(item, i) =>
@@ -1209,11 +1215,14 @@ function index() {
 									/>
 								</FormGroup>
 								<FormGroup label='Contact Number' className='col-12 mt-3'>
-									<Input
+								<Input
 										type='number'
 										value={contact}
 										min={0}
-										onChange={handleContactChange}
+										onChange={(e: any) => {
+											const value = e.target.value.slice(0, 9);
+											contactchanget(value);
+										}}
 										validFeedback='Looks good!'
 									/>
 								</FormGroup>

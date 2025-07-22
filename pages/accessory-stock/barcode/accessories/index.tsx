@@ -348,7 +348,7 @@ const Index: NextPage = () => {
 														stockInOut.stock === 'stockIn',
 												)
 												.filter((brand: any) => brand.type === 'Accessory')
-												.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+												.sort((a: any, b: any) => new Date(b.code).getTime() - new Date(a.code).getTime())
 												.map((brand: any, index: any) => (
 													<tr key={index}>
 														<td>{brand.date}</td>
