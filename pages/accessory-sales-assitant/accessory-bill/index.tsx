@@ -81,74 +81,74 @@ function index() {
 	useEffect(() => {
 		fetchCustomerData();
 	}, []);
-	
+
 	// Move the customer fetching to a standalone function we can call when needed
 	const fetchCustomerData = async () => {
 		try {
-			console.log("Fetching customer data...");
-			
+			console.log('Fetching customer data...');
+
 			// First, fetch from customer table
 			const { data: customerData, error: customerError } = await supabase
 				.from('customer')
 				.select('*');
-	
+
 			if (customerError) throw customerError;
-			
+
 			// Now also fetch from accessorybill table for all unique customers
 			const { data: billData, error: billError } = await supabase
 				.from('accessorybill')
 				.select('name, contact')
 				.not('name', 'is', null)
 				.not('contact', 'is', null);
-				
+
 			if (billError) throw billError;
-			
+
 			// Combine the data, giving preference to customer table entries
 			let combinedCustomers = [...(customerData || [])];
-			
+
 			// Add unique customers from bills that aren't already in the customer table
 			if (billData) {
-				billData.forEach(bill => {
+				billData.forEach((bill) => {
 					// Normalize the contact number for comparison
 					const normalizedBillContact = normalizeContact(bill.contact);
-					
+
 					// Only add if this contact doesn't already exist
-					const exists = combinedCustomers.some(c => 
-						normalizeContact(c.contact) === normalizedBillContact
+					const exists = combinedCustomers.some(
+						(c) => normalizeContact(c.contact) === normalizedBillContact,
 					);
-					
+
 					if (!exists && bill.contact && bill.name) {
 						combinedCustomers.push({
 							id: `bill_${bill.contact}`,
 							name: bill.name,
-							contact: bill.contact
+							contact: bill.contact,
 						});
 					}
 				});
 			}
-			
+
 			setCustomer(combinedCustomers);
 			console.log('Loaded combined customer data:', combinedCustomers);
 		} catch (error) {
 			console.error('Error fetching customer data:', error);
 		}
 	};
-	
+
 	// Helper function to normalize contact numbers for consistent comparison
 	const normalizeContact = (contact: any): string => {
 		if (!contact) return '';
-		
+
 		// Convert to string
 		let contactStr = String(contact);
-		
+
 		// Remove leading zero if present
 		if (contactStr.startsWith('0')) {
 			contactStr = contactStr.substring(1);
 		}
-		
+
 		// Remove any spaces or special characters
 		contactStr = contactStr.replace(/[^0-9]/g, '');
-		
+
 		return contactStr;
 	};
 
@@ -160,44 +160,46 @@ function index() {
 			setStaus(false);
 			return;
 		}
-		
+
 		// Format the contact number consistently
 		const normalizedInput = normalizeContact(value);
 		if (value.length > 1 && value.startsWith('0')) {
 			value = value.substring(1);
 		}
 		setContact(value);
-		
+
 		console.log('Contact search value (normalized):', normalizedInput);
 		console.log('Available customers:', customer);
-		
+
 		// Try different search approaches to find the customer
 		let matchingCustomer = null;
-		
+
 		// Loop through all customers and try to find matches
 		for (const cust of customer) {
 			const custContact = normalizeContact(cust.contact);
-			
+
 			// Debug each comparison
-			console.log(`Comparing input "${normalizedInput}" with customer "${custContact}", name: ${cust.name}`);
-			
+			console.log(
+				`Comparing input "${normalizedInput}" with customer "${custContact}", name: ${cust.name}`,
+			);
+
 			// 1. Exact match
 			if (custContact === normalizedInput) {
-				console.log("FOUND EXACT MATCH");
+				console.log('FOUND EXACT MATCH');
 				matchingCustomer = cust;
 				break;
 			}
-			
+
 			// 2. Contains match (input is part of customer contact)
 			if (normalizedInput.length >= 3 && custContact.includes(normalizedInput)) {
-				console.log("FOUND CONTAINS MATCH");
+				console.log('FOUND CONTAINS MATCH');
 				matchingCustomer = cust;
 				break;
 			}
-			
+
 			// 3. Ends-with match
 			if (normalizedInput.length >= 3 && custContact.endsWith(normalizedInput)) {
-				console.log("FOUND ENDS-WITH MATCH");
+				console.log('FOUND ENDS-WITH MATCH');
 				matchingCustomer = cust;
 				break;
 			}
@@ -238,24 +240,24 @@ function index() {
 	// }, [orderedItems]);
 	useEffect(() => {
 		const fetchData = async () => {
-		  try {
-			const { data, error } = await supabase
-			  .from('accessorybill')
-			  .select('id')
-			  .order('id', { ascending: false })
-			  .limit(1);
-	  
-			if (error) throw error;
-	  
-			const largestId = data?.[0]?.id || 0;
-			setId(largestId + 1);
-		  } catch (error:any) {
-			console.error('Error fetching max ID:', error.message);
-		  }
+			try {
+				const { data, error } = await supabase
+					.from('accessorybill')
+					.select('id')
+					.order('id', { ascending: false })
+					.limit(1);
+
+				if (error) throw error;
+
+				const largestId = data?.[0]?.id || 0;
+				setId(largestId + 1);
+			} catch (error: any) {
+				console.error('Error fetching max ID:', error.message);
+			}
 		};
-	  
+
 		fetchData();
-	  }, [orderedItems]);
+	}, [orderedItems]);
 
 	useEffect(() => {
 		if (dropdownRef.current) {
@@ -442,7 +444,7 @@ function index() {
 		const selectedItem = items.find((item) => item.barcode === selectedProduct);
 		if (selectedItem) {
 			console.log('Selected item:', selectedItem);
-			
+
 			if (selectedItem.type == 'displaystock') {
 				const existingItemIndex = orderedItems.findIndex(
 					(item) => item.barcode.slice(0, 4) === selectedProduct.slice(0, 4),
@@ -468,59 +470,67 @@ function index() {
 				const barcodePrefix = selectedProduct.substring(0, 4);
 				console.log('Looking for item with code:', barcodePrefix);
 				console.log('All available item codes:', itemAcces?.map((item: any) => item.code));
-				
+
 				// More flexible matching - try different approaches
 				let matchingItem = itemAcces?.find(
-					(accessItem: any) => accessItem.code === barcodePrefix
+					(accessItem: any) => accessItem.code === barcodePrefix,
 				);
-				
+
 				// If not found, try trimming whitespace
 				if (!matchingItem) {
-					matchingItem = itemAcces?.find(
-						(accessItem: any) => {
-							// Ensure code is a string before using trim
-							const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-							return itemCode.trim() === barcodePrefix.trim();
-						}
-					);
+					matchingItem = itemAcces?.find((accessItem: any) => {
+						// Ensure code is a string before using trim
+						const itemCode =
+							typeof accessItem.code === 'string'
+								? accessItem.code
+								: String(accessItem.code);
+						return itemCode.trim() === barcodePrefix.trim();
+					});
 				}
-				
+
 				// If still not found, try case-insensitive comparison
 				if (!matchingItem) {
-					matchingItem = itemAcces?.find(
-						(accessItem: any) => {
-							// Ensure code is a string before using toLowerCase
-							const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-							return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
-						}
-					);
+					matchingItem = itemAcces?.find((accessItem: any) => {
+						// Ensure code is a string before using toLowerCase
+						const itemCode =
+							typeof accessItem.code === 'string'
+								? accessItem.code
+								: String(accessItem.code);
+						return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
+					});
 				}
-				
+
 				// If still not found, try comparing just the first 3 characters
 				if (!matchingItem) {
-					matchingItem = itemAcces?.find(
-						(accessItem: any) => {
-							if (!accessItem.code) return false;
-							// Ensure code is a string before using substring
-							const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-							return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
-						}
-					);
+					matchingItem = itemAcces?.find((accessItem: any) => {
+						if (!accessItem.code) return false;
+						// Ensure code is a string before using substring
+						const itemCode =
+							typeof accessItem.code === 'string'
+								? accessItem.code
+								: String(accessItem.code);
+						return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
+					});
 				}
-				
+
 				console.log('Found matching item:', matchingItem);
-				
+
 				// Debug raw quantity values
 				if (matchingItem) {
 					console.log('Raw quantity value:', matchingItem.quantity);
 					console.log('Quantity type:', typeof matchingItem.quantity);
 				} else {
-					console.log('No matching item found. Selected product barcode:', selectedProduct);
+					console.log(
+						'No matching item found. Selected product barcode:',
+						selectedProduct,
+					);
 					// Get the item from the Accstock to show its properties
-					const stockItem = Accstock?.find((item: any) => item.barcode === selectedProduct);
+					const stockItem = Accstock?.find(
+						(item: any) => item.barcode === selectedProduct,
+					);
 					console.log('Selected product data from stock:', stockItem);
 				}
-				
+
 				// Ensure quantities are properly converted to numbers
 				// Try multiple parsing approaches to handle different data formats
 				let availableQty = 0;
@@ -531,36 +541,44 @@ function index() {
 						availableQty = matchingItem.quantity;
 					}
 				}
-				
+
 				const requestedQty = parseInt(quantity) || 0;
-				
+
 				console.log('Available quantity (parsed):', availableQty);
 				console.log('Requested quantity:', requestedQty);
-				
+
 				// Check if there's enough stock available
 				if (!matchingItem) {
 					Swal.fire('Error', `Item not found in inventory.`, 'error');
 					return;
 				}
-				
+
 				if (availableQty < requestedQty) {
-					Swal.fire('Error', `Insufficient stock available for this item. Available: ${availableQty}, Requested: ${requestedQty}`, 'error');
+					Swal.fire(
+						'Error',
+						`Insufficient stock available for this item. Available: ${availableQty}, Requested: ${requestedQty}`,
+						'error',
+					);
 					return;
 				}
 
 				const existingItemIndex = orderedItems.findIndex(
 					(item) => item.barcode === selectedProduct,
 				);
-				
+
 				// For existing items, check total quantity against available stock
 				if (existingItemIndex !== -1) {
 					const totalQuantity = parseInt(quantity) || 0;
-					
+
 					if (availableQty < totalQuantity) {
-						Swal.fire('Error', `Insufficient stock available for this item. Available: ${availableQty}, Requested: ${totalQuantity}`, 'error');
+						Swal.fire(
+							'Error',
+							`Insufficient stock available for this item. Available: ${availableQty}, Requested: ${totalQuantity}`,
+							'error',
+						);
 						return;
 					}
-					
+
 					let updatedItems = [...orderedItems];
 					updatedItems[existingItemIndex] = {
 						...selectedItem,
@@ -621,49 +639,52 @@ function index() {
 			try {
 				// Check if all items have sufficient stock before proceeding
 				const insufficientItems = [];
-				
+
 				for (const item of orderedItems) {
 					const { barcode, quantity } = item;
 					const barcodePrefix = barcode.slice(0, 4);
 					console.log('Checking final stock for barcode prefix:', barcodePrefix);
-					
+
 					// More flexible matching for final checkout
 					let matchingItem = itemAcces?.find(
-						(accessItem: any) => accessItem.code === barcodePrefix
+						(accessItem: any) => accessItem.code === barcodePrefix,
 					);
-					
+
 					// If not found, try alternatives
 					if (!matchingItem) {
-						matchingItem = itemAcces?.find(
-							(accessItem: any) => {
-								// Ensure code is a string before using trim
-								const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-								return itemCode.trim() === barcodePrefix.trim();
-							}
-						);
+						matchingItem = itemAcces?.find((accessItem: any) => {
+							// Ensure code is a string before using trim
+							const itemCode =
+								typeof accessItem.code === 'string'
+									? accessItem.code
+									: String(accessItem.code);
+							return itemCode.trim() === barcodePrefix.trim();
+						});
 					}
-					
+
 					if (!matchingItem) {
-						matchingItem = itemAcces?.find(
-							(accessItem: any) => {
-								// Ensure code is a string before using toLowerCase
-								const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-								return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
-							}
-						);
+						matchingItem = itemAcces?.find((accessItem: any) => {
+							// Ensure code is a string before using toLowerCase
+							const itemCode =
+								typeof accessItem.code === 'string'
+									? accessItem.code
+									: String(accessItem.code);
+							return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
+						});
 					}
-					
+
 					if (!matchingItem) {
-						matchingItem = itemAcces?.find(
-							(accessItem: any) => {
-								if (!accessItem.code) return false;
-								// Ensure code is a string before using substring
-								const itemCode = typeof accessItem.code === 'string' ? accessItem.code : String(accessItem.code);
-								return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
-							}
-						);
+						matchingItem = itemAcces?.find((accessItem: any) => {
+							if (!accessItem.code) return false;
+							// Ensure code is a string before using substring
+							const itemCode =
+								typeof accessItem.code === 'string'
+									? accessItem.code
+									: String(accessItem.code);
+							return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
+						});
 					}
-					
+
 					// More robust parsing of quantity values
 					let availableQty = 0;
 					if (matchingItem) {
@@ -673,9 +694,9 @@ function index() {
 							availableQty = matchingItem.quantity;
 						}
 					}
-					
+
 					const requestedQty = parseInt(quantity) || 0;
-					
+
 					if (!matchingItem || availableQty < requestedQty) {
 						insufficientItems.push({
 							name: `${item.category} ${item.model} ${item.brand}`,
@@ -684,16 +705,19 @@ function index() {
 						});
 					}
 				}
-				
+
 				if (insufficientItems.length > 0) {
-					const itemList = insufficientItems.map(item => 
-						`${item.name} (Requested: ${item.requested}, Available: ${item.available})`
-					).join('<br>');
-					
+					const itemList = insufficientItems
+						.map(
+							(item) =>
+								`${item.name} (Requested: ${item.requested}, Available: ${item.available})`,
+						)
+						.join('<br>');
+
 					Swal.fire({
 						title: 'Insufficient Stock',
 						html: `Cannot proceed with billing. The following items don't have enough stock:<br><br>${itemList}`,
-						icon: 'error'
+						icon: 'error',
 					});
 					return;
 				}
@@ -729,7 +753,7 @@ function index() {
 						const { error: customerError } = await supabase
 							.from('customer')
 							.insert([{ name, contact }]);
-						
+
 						if (customerError) {
 							console.error('Error saving customer:', customerError);
 						} else {
@@ -771,9 +795,13 @@ function index() {
 
 							const updatedQuantity = quantity1 - quantity;
 							try {
-						console.log(id)
-						console.log(updatedQuantity)
-								await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
+								console.log(barcodePrefix);
+								console.log(updatedQuantity);
+								// await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
+								await supabase
+								.from('ItemManagementAcce')
+								.update({quantity:updatedQuantity})
+								.eq('code', barcodePrefix);
 							} catch (error) {
 								console.error(`Failed to update stock for ID: ${id}`, error);
 							}
@@ -787,9 +815,9 @@ function index() {
 					setDiscount(0);
 					setContact(0);
 					setName('');
-					setReturnstatus(false)
-					setReturnid('')
-					setReturndata('')
+					setReturnstatus(false);
+					setReturnid('');
+					setReturndata('');
 
 					const printContent: any = invoiceRef.current.innerHTML;
 
@@ -810,7 +838,7 @@ function index() {
 						showConfirmButton: false,
 						timer: 1000,
 					});
-					window.location.reload();
+					// window.location.reload();
 				}
 			} catch (error) {
 				console.error('Error during handleUpload: ', error);
@@ -912,12 +940,8 @@ function index() {
 	const handlereturn = async (id: any) => {
 		try {
 			console.log('Fetching return data for ID:', id);
-			
-			const { data, error } = await supabase
-				.from('return')
-				.select('*')
-				.eq('id', id)
-				.single();
+
+			const { data, error } = await supabase.from('return').select('*').eq('id', id).single();
 
 			if (error) {
 				console.error('Supabase error:', error);
@@ -947,7 +971,7 @@ function index() {
 	// Add this function to handle direct name lookups from contact
 	const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value.slice(0, 9);
-		console.log("Contact input changed:", value);
+		console.log('Contact input changed:', value);
 		contactchanget(value);
 	};
 
@@ -1215,7 +1239,7 @@ function index() {
 									/>
 								</FormGroup>
 								<FormGroup label='Contact Number' className='col-12 mt-3'>
-								<Input
+									<Input
 										type='number'
 										value={contact}
 										min={0}
@@ -1239,8 +1263,10 @@ function index() {
 										validFeedback='Looks good!'
 									/>
 									<small className='text-muted'>
-                                        {status ? "Customer record found in database" : "New customer - will be saved with this bill"}
-                                    </small>
+										{status
+											? 'Customer record found in database'
+											: 'New customer - will be saved with this bill'}
+									</small>
 								</FormGroup>
 							</CardBody>
 							<CardFooter>
@@ -1257,13 +1283,7 @@ function index() {
 						</Card>
 					</div>
 
-					<Card
-					hidden
-						stretch
-						className='mt-4'
-						style={{ height: '80vh' }}
-						
-					>
+					<Card hidden stretch className='mt-4' style={{ height: '80vh' }}>
 						<CardBody isScrollable>
 							<div
 								className='ms-4 ps-3'
@@ -1371,8 +1391,8 @@ function index() {
 												}}>
 												Description
 												&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&emsp;&emsp;&emsp;&emsp;&nbsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-												Price &nbsp;&emsp;&nbsp;&nbsp; D/Price&emsp;&emsp; Qty
-												&nbsp;&emsp;&emsp; Amount
+												Price &nbsp;&emsp;&nbsp;&nbsp; D/Price&emsp;&emsp;
+												Qty &nbsp;&emsp;&emsp; Amount
 											</p>
 											<span
 												style={{
@@ -1399,7 +1419,7 @@ function index() {
 												) => (
 													// <table className='table table-hover table-bordered border-primary'
 													<table
-													// border={1}
+														// border={1}
 														key={index}
 														style={{
 															color: 'black',
@@ -1407,8 +1427,6 @@ function index() {
 															borderCollapse: 'collapse',
 															fontSize: '12px',
 														}}>
-															
-															
 														<tbody>
 															<tr>
 																<td
@@ -1417,8 +1435,9 @@ function index() {
 																		width: '44%',
 																		padding: '5px',
 																	}}>
-																	{index + 1}.{" "}{code} {brand} {model}{' '}
-																	{category} {storage} {imi} {" "}
+																	{index + 1}. {code} {brand}{' '}
+																	{model} {category} {storage}{' '}
+																	{imi}{' '}
 																	<label
 																		style={{
 																			fontSize: '10px',
@@ -1432,7 +1451,6 @@ function index() {
 																		width: '15%',
 																		textAlign: 'right',
 																		padding: '5px',
-																		
 																	}}>
 																	{sellingPrice.toFixed(2)}
 																</td>
@@ -1442,9 +1460,10 @@ function index() {
 																		width: '15%',
 																		textAlign: 'right',
 																		padding: '5px',
-																		
 																	}}>
-																	{(discount/quantity).toFixed(2)}
+																	{(discount / quantity).toFixed(
+																		2,
+																	)}
 																</td>
 																<td
 																	style={{
@@ -1463,7 +1482,8 @@ function index() {
 																		padding: '5px',
 																	}}>
 																	{(
-																		(sellingPrice * quantity)-discount
+																		sellingPrice * quantity -
+																		discount
 																	).toFixed(2)}
 																</td>
 															</tr>
@@ -1473,7 +1493,6 @@ function index() {
 											)}
 											<div
 												style={{
-													
 													position: 'absolute',
 													top: '100mm',
 													left: '0',
@@ -1496,9 +1515,8 @@ function index() {
 														Total
 													</div>
 													<div className='position-absolute top-0 end-5'>
-														{calculateSubTotal()-getAllDiscounts()}.00
+														{calculateSubTotal() - getAllDiscounts()}.00
 													</div>
-													
 												</div>
 												<br />
 												<span
@@ -1539,7 +1557,10 @@ function index() {
 																Return Value
 															</div>
 															<div className='position-absolute top-0 end-5'>
-																{Number(returndata?.sold_price ?? 0)}.00
+																{Number(
+																	returndata?.sold_price ?? 0,
+																)}
+																.00
 															</div>
 														</div>
 														<br />
