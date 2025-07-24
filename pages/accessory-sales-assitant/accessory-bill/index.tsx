@@ -838,7 +838,7 @@ function index() {
 						showConfirmButton: false,
 						timer: 1000,
 					});
-					// window.location.reload();
+					window.location.reload();
 				}
 			} catch (error) {
 				console.error('Error during handleUpload: ', error);
