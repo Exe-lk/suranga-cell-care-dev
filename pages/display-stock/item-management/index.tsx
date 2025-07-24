@@ -68,7 +68,8 @@ const Index: NextPage = () => {
 		error,
 		isLoading,
 		refetch,
-	} = useGetItemDissQuery(debouncedSearchTerm);
+	} = useGetItemDissQuery(undefined);
+	console.log(itemDiss)
 	const {
 		data: StockInOuts,
 		error: stockInOutError,
@@ -467,6 +468,14 @@ const Index: NextPage = () => {
 		Swal.fire('Import Complete', `Imported: ${success}, Failed: ${fail}`, fail ? 'warning' : 'success');
 	};
 
+	const [startDate, setStartDate] = useState<string>(() => {
+		const today = new Date();
+		const yyyy = today.getFullYear();
+		const mm = String(today.getMonth() + 1).padStart(2, '0');
+		const dd = String(today.getDate()).padStart(2, '0');
+		return `${yyyy}-${mm}-${dd}`;
+	});
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -682,6 +691,7 @@ const Index: NextPage = () => {
 														}
 														return true;
 													})
+													.sort((a, b) => b.code - a.code)
 													.map((item: any, index: any) => (
 														<React.Fragment key={index}>
 															<tr key={index} style={getRowStyle(item)}>
