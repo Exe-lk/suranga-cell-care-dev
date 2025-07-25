@@ -500,9 +500,10 @@ const Index: NextPage = () => {
 						onChange={(e) => setCategoryFilter(e.target.value)}
 						style={{ minWidth: '120px' }}>
 						<option value=''>All Categories</option>
-						<option value='Display'>Display</option>
-						<option value='Battery'>Battery</option>
+						<option value='Displays'>Display</option>
+						<option value='Battery Cell'>Battery</option>
 						<option value='Screens'>Screens</option>
+						<option value='Touch Pad'>Touch Pad</option>
 					</select>
 					<select
 						className='form-select me-2'

@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               const searchTermLower = searchTermStr.toLowerCase();
               filteredItems = allItems.filter((item: any) => {
                 return (
-                  item.code?.toString().toLowerCase().includes(searchTermLower) ||
+                  item.code?.toString().toLowerCase().includes(searchTermLower.slice(0, 4)) ||
                   item.category?.toLowerCase().includes(searchTermLower) ||
                   item.brand?.toLowerCase().includes(searchTermLower) ||
                   item.model?.toLowerCase().includes(searchTermLower) ||

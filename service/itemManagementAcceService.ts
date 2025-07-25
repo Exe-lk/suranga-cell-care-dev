@@ -64,26 +64,20 @@ export const getItemAcces = async () => {
 
     const { data: firstBatch, error: err1 } = await supabase
     .from('ItemManagementAcce')
-    .select('*')
-    .range(0, 999)  // First 1000 rows
+    .select('*') // First 1000 rows
     .eq('status', true);
-  const { data: secondBatch, error: err2 } = await supabase
-  .from('ItemManagementAcce')
-    .select('*')
-    .range(1000, 2000)
-    .eq('status', true);  // Next 800 rows
+ // Next 800 rows
   
-  // Combine both batches
-  const allData = [...(firstBatch || []), ...(secondBatch || [])];
 
 
 
-  if (err1 || err2) {
+
+  if (err1 ) {
     console.error('Error fetching items:', err1);
     return [];
   }
 
-  return allData;
+  return firstBatch;
 };
 
 export const getDeleteItemAcces = async () => {

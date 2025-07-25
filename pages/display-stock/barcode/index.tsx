@@ -95,14 +95,14 @@ const Index: NextPage = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const { data: stocks, error } = await supabase
+				if(startDate){
+					const { data: stocks, error } = await supabase
 					.from('Stock')
 					.select('id, barcode, barcodePrefix, boxNumber, brand, category, code, cost, date, description, itemId, model, printlable, quantity, sellingPrice, status, stock, suppName, billNumber, branchNum, dateIn, sellectedItem, sellerName, sellingPrice, technicianNum')
 					.eq('status', true)
 					.eq('stock', 'stockIn')
 					.eq('date',startDate);
-	
-				if (error) throw error;
+					if (error) throw error;
 	
 				const mappedStocks:any = stocks.map((stock) => ({
 					...stock,
@@ -110,6 +110,25 @@ const Index: NextPage = () => {
 				}));
 	
 				setStockInOuts(mappedStocks);
+				}else{
+					const { data: stocks, error } = await supabase
+					.from('Stock')
+					.select('id, barcode, barcodePrefix, boxNumber, brand, category, code, cost, date, description, itemId, model, printlable, quantity, sellingPrice, status, stock, suppName, billNumber, branchNum, dateIn, sellectedItem, sellerName, sellingPrice, technicianNum')
+					.eq('status', true)
+					.eq('stock', 'stockIn')
+					if (error) throw error;
+	
+				const mappedStocks:any = stocks.map((stock) => ({
+					...stock,
+					subStock: [{}], // initially empty
+				}));
+	
+				setStockInOuts(mappedStocks);
+					
+				}
+				
+	
+				
 			} catch (error) {
 				console.error('Error fetching stocks: ', error);
 			}
