@@ -5,8 +5,7 @@ import Page from '../../../layout/Page/Page';
 import LineWithLabel1 from '../../../components/lineAcces';
 import PieBasic from '../../../components/QRAnalatisk';
 import LineWithLabe2 from '../../../components/SalesAnalatisk';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../../firebaseConfig';
+import { supabase } from '../../../lib/supabase';
 import Card, { CardBody, CardLabel, CardTitle } from '../../../components/bootstrap/Card';
 import classNames from 'classnames';
 import useDarkMode from '../../../hooks/useDarkMode';
@@ -50,39 +49,37 @@ const Index: NextPage = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const dataCollection = collection(firestore, 'accessorybill');
-				const querySnapshot = await getDocs(dataCollection);
+				const { data: firebaseData, error } = await supabase
+					.from('accessorybill')
+					.select('*');
 
-				// Get today's date in the format "MM/DD/YYYY"
-				const today = new Date();
-				const formattedToday = `${
-					today.getMonth() + 1
-				}/${today.getDate()}/${today.getFullYear()}`;
-
-				// Filter data to include only today's values
+				if (error) {
+					console.error('Error fetching data: ', error);
+					return;
+				}
 				const date1 = formattedForDisplay(date);
+				console.log('Filtering for date:', date1);
+				
+				const filteredData = firebaseData.filter((order: any) => {
+					if (!order.date) return false;
+					if (order.date === date1) return true;
+					try {
+						const orderDate = new Date(order.date);
+						const formattedOrderDate = `${orderDate.getMonth() + 1}/${orderDate.getDate()}/${orderDate.getFullYear()}`;
+						return formattedOrderDate === date1;
+					} catch (e) {
+						return false;
+					}
+				});
 
-				console.log(formattedToday);
-				console.log(date1);
-				const firebaseData: any = querySnapshot.docs
-					.map((doc) => {
-						const data = doc.data();
-						return {
-							...data,
-							cid: doc.id,
-						};
-					})
-					.filter((order: any) => order.date === formattedForDisplay(date));
-
-				setOrders(firebaseData);
-				console.log(firebaseData);
+				setOrders(filteredData);
+				console.log('Filtered data for date:', date1, filteredData);
 			} catch (error) {
 				console.error('Error fetching data: ', error);
 			}
 		};
 		fetchData();
 	}, [date]);
-	const totalNetValue = orders.reduce((total, order) => total + order.netValue, 0);
 
 	const calculateTotals = (data: any) => {
 		let totalDiscount = 0;
@@ -111,6 +108,11 @@ const Index: NextPage = () => {
 	};
 
 	const totals = calculateTotals(orders);
+	
+	// Debug information
+	console.log('Orders for selected date:', orders);
+	console.log('Calculated totals:', totals);
+	
 	return (
 		<PageWrapper>
 			<Page>
@@ -145,7 +147,7 @@ const Index: NextPage = () => {
 							<CardBody isScrollable className='table-responsive ms-2'>
 								<CardLabel>
 									<p className='fs-2'>
-										{totals.totalNetValue}.00 LKR
+										{totals.totalNetValue.toFixed(2)} LKR
 										<Icon
 											icon='TrendingUp'
 											size='6x'
@@ -171,7 +173,7 @@ const Index: NextPage = () => {
 							<CardBody isScrollable className='table-responsive ms-2'>
 								<CardLabel>
 									<p className='fs-1'>
-										{totals.totalCost}.00 LKR
+										{totals.totalCost.toFixed(2)} LKR
 										<Icon
 											icon={'ArrowCircleDown'}
 											size='4x'
@@ -197,7 +199,7 @@ const Index: NextPage = () => {
 							<CardBody isScrollable className='table-responsive ms-2'>
 								<CardLabel>
 									<p className='fs-2'>
-										{totals.totalNetValue - totals.totalCost}.00 LKR
+										{(totals.totalNetValue - totals.totalCost).toFixed(2)} LKR
 										<Icon
 											icon='ArrowCircleUp'
 											size='4x'

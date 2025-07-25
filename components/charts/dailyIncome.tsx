@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Card, { CardActions, CardBody, CardHeader, CardLabel, CardSubTitle, CardTitle } from '../../components/bootstrap/Card';
 import Chart, { IChartOptions } from '../../components/extras/Chart';
 import CommonStoryBtn from '../../common/partial/other/CommonStoryBtn';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 const DailyFinancialChart = () => {
     const [dailyData, setDailyData] = useState<
@@ -17,12 +16,14 @@ const DailyFinancialChart = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const dataCollection = collection(firestore, 'accessorybill');
-                const querySnapshot = await getDocs(dataCollection);
-                const firebaseData = querySnapshot.docs.map((doc) => ({
-                    ...doc.data(),
-                    cid: doc.id,
-                }));
+                const { data: firebaseData, error } = await supabase
+                    .from('accessorybill')
+                    .select('*');
+
+                if (error) {
+                    console.error('Error fetching data:', error);
+                    return;
+                }
 
                 const dailyTotals: Record<string, any> = {};
 
