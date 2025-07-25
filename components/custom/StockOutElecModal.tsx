@@ -143,6 +143,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 
 	const getsubstock = async () => {
 		try {
+			console.log(stockOutData)
 			// Step 1: Fetch matching stocks
 			const { data: stocks, error: stockError } = await supabase
 				.from('Stock')
@@ -153,15 +154,15 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			if (stockError) {
 				throw stockError;
 			}
-	
+			console.log(stocks)
 			if (!stocks || stocks.length === 0) {
 				setSubstockInData([]);
 				return;
 			}
-	console.log(stocks)
+
 			// Step 2: Fetch substock for all matched stocks
 			const stockIds = stocks.map((stock) => stock.barcode);
-	
+	console.log(stockIds)
 			const { data: subStocks, error: subStockError } = await supabase
 				.from('subStock')
 				.select('*')
@@ -170,7 +171,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			if (subStockError) {
 				throw subStockError;
 			}
-
+console.log(subStocks)
 			setSubstockInData(subStocks || []);
 		} catch (error) {
 			console.error('Error fetching substock data:', error);

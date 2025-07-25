@@ -69,7 +69,7 @@ const Index: NextPage = () => {
 		isLoading,
 		refetch,
 	} = useGetItemDissQuery(undefined);
-	console.log(itemDiss)
+
 	const {
 		data: StockInOuts,
 		error: stockInOutError,
@@ -680,6 +680,15 @@ const Index: NextPage = () => {
 											)}
 											{itemDiss &&
 												dataPagination(itemDiss, currentPage, perPage)
+													.filter((item: any) => {
+														if (!searchTerm) return true;
+														const codeStr = item.code?.toString().toLowerCase() || '';
+														const modelStr = item.model?.toLowerCase() || '';
+														const search = searchTerm.toLowerCase();
+														const searchFirst4 = search.slice(0, 4);
+														
+														return codeStr.includes(searchFirst4) || modelStr.includes(search);
+													})
 													.filter((item: any) => {
 														// Apply category filter
 														if (categoryFilter && item.category !== categoryFilter) {
