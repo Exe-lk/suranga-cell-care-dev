@@ -277,11 +277,12 @@ export const createstockIn = async (values: any) => {
 	}
   };
   export const updateSubStock = async (subStockDocId: string, values: any) => {
-	try {
+	try { 
+		console.log(subStockDocId)
 	  const { error } = await supabase
 		.from('subStock')
 		.update(values)
-		.eq('id', subStockDocId);
+		.eq('barcode', subStockDocId);
   
 	  if (error) throw error;
   
