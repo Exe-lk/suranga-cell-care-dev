@@ -9,8 +9,7 @@ import Card, {
 } from '../../components/bootstrap/Card';
 import Chart, { IChartOptions } from '../../components/extras/Chart';
 import CommonStoryBtn from '../../common/partial/other/CommonStoryBtn';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 const LineBasic = () => {
     const [monthlyData, setMonthlyData] = useState<
@@ -23,14 +22,14 @@ const currentYear = today.getFullYear();
 useEffect(() => {
     const fetchData = async () => {
         try {
-            const dataCollection = collection(firestore, 'accessorybill');
-            const querySnapshot = await getDocs(dataCollection);
+            const { data: firebaseData, error } = await supabase
+                .from('accessorybill')
+                .select('*');
 
-            // Convert Firestore data into a usable array
-            const firebaseData = querySnapshot.docs.map((doc) => ({
-                ...doc.data(),
-                cid: doc.id,
-            }));
+            if (error) {
+                console.error('Error fetching data:', error);
+                return;
+            }
 
             // Initialize an object for monthly totals
             const monthlyTotals: Record<string, any> = {};
@@ -41,9 +40,8 @@ useEffect(() => {
 
                 const orderDate = new Date(order.date);
                 const orderYear = orderDate.getFullYear();
-                const orderMonth = orderDate.getMonth(); // 0 = Jan, 1 = Feb, ...
-
-                // Only consider orders from the current year
+                const orderMonth = orderDate.getMonth(); 
+          
                 if (orderYear === currentYear) {
                     const monthName = new Intl.DateTimeFormat('en', { month: 'long' }).format(orderDate);
 
@@ -70,7 +68,7 @@ useEffect(() => {
                 }
             });
 
-            // Convert object to array and sort by month
+      
             const sortedMonthlyData = Object.values(monthlyTotals).sort(
                 (a: any, b: any) => new Date(`${a.month} 1, ${currentYear}`).getMonth() - new Date(`${b.month} 1, ${currentYear}`).getMonth()
             );
