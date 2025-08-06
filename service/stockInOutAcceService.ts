@@ -31,7 +31,52 @@ export const createstockIn = async (values: any) => {
 		return null;
 	}
 
-	console.log('Successfully created record with ID:', data?.[0]?.id);
+	console.log('Successfully created stock in record with ID:', data?.[0]?.id);
+
+	// Update the item quantity in ItemManagementAcce table if item ID is provided
+	try {
+		if (!values.cid) {
+			console.log('No item ID provided for stock in quantity update.');
+			return data?.[0]?.id;
+		}
+
+		// Fetch the current item by ID to get the latest quantity
+		const { data: itemData, error: itemError } = await supabase
+			.from('ItemManagementAcce')
+			.select('*')
+			.eq('id', values.cid)
+			.single();
+
+		if (itemError) {
+			console.error('Error finding item in ItemManagementAcce by ID:', itemError);
+			return data?.[0]?.id;
+		}
+
+		console.log('Item data found for stock in:', itemData);
+		if (itemData) {
+			// Calculate new quantity by adding the stock in quantity to current quantity
+			const currentQuantity = Number(itemData.quantity) || 0;
+			const stockInQuantity = Number(values.quantity) || 0;
+			const newQuantity = currentQuantity + stockInQuantity;
+
+			// Update the quantity in ItemManagementAcce table
+			const { error: updateError } = await supabase
+				.from('ItemManagementAcce')
+				.update({ quantity: newQuantity.toString() })
+				.eq('id', itemData.id);
+
+			if (updateError) {
+				console.error('Error updating ItemManagementAcce quantity:', updateError);
+			} else {
+				console.log(`Successfully updated ItemManagementAcce quantity for item ${itemData.id} from ${currentQuantity} to ${newQuantity}`);
+			}
+		} else {
+			console.warn('No matching item found in ItemManagementAcce table for stock in by ID');
+		}
+	} catch (error) {
+		console.error('Error updating ItemManagementAcce quantity by ID:', error);
+	}
+
 	return data?.[0]?.id;
 };
 
