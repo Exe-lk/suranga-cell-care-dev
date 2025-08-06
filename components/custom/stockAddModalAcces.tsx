@@ -85,6 +85,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const nowQuantity = quantity;
 	const [imageurl, setImageurl] = useState<any>(null);
 	const { data: dealers } = useGetDealersQuery(undefined);
+	const { refetch: refetchItemData } = useGetItemAcceByIdQuery(id);
 
 	// Function to generate 6-digit stock-in code sequentially
 	const generateStockInCode = (existingStockInOuts: any[]) => {
@@ -311,56 +312,36 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					return; // Stop the submission process
 				}
 				
-				// 2. Prepare data for API - Use the 6-digit stock-in code
+				// 2. Prepare data for API - Use the 6-digit stock-in code and include item ID
 				const submissionData = {
 					...values,
 					code: stockInCode, // Use the 6-digit stock-in code instead of item code
 					barcode: `${generatedCode}${stockInCode}`, // Use 4-digit item code + 6-digit stock-in code
 					NIC_Photo: url,
+					cid: stockIn.id, // Pass the item ID so the backend can update the quantity
 				};
 				
 				console.log("=== SUBMISSION WITH 6-DIGIT CODE ===");
 				console.log("6-digit stock-in code:", stockInCode);
 				console.log("Item's original code (4 digits):", generatedCode);
 				console.log("Generated barcode (4+6 digits):", submissionData.barcode);
+				console.log("Item ID for quantity update:", stockIn.id);
 				
 				try {
-					// 3. Add the stock-in record with the 6-digit code
+					// 3. Add the stock-in record - the backend will handle quantity update
 					console.log("Sending to API:", submissionData);
 					const response = await addstockIn(submissionData).unwrap();
 					console.log("=== API RESPONSE ===");
 					console.log("Stock in response:", response);
 					
-					// 4. The barcode is already correct, no need to update it
 					console.log("=== FINAL BARCODE GENERATION ===");
 					console.log("Stockin ID:", response);
 					console.log("6-digit Stock-in Code:", stockInCode);
 					console.log("Final barcode:", submissionData.barcode);
 					
-					// 5. Update the item quantity in ItemManagementAcce table
-					if (stockIn?.id) {
-						const currentQuantity = parseInt(stockIn.quantity || '0', 10);
-						const addedQuantity = parseInt(values.quantity || '0', 10);
-						const newQuantity = (currentQuantity + addedQuantity).toString();
-						
-						console.log(`Updating quantity from ${currentQuantity} to ${newQuantity}`);
-						
-						// Call the correct API to update the item quantity in ItemManagementAcce table
-						await updateItemAcce({
-							id: stockIn.id,
-							type: stockIn.type,
-							mobileType: stockIn.mobileType,
-							category: stockIn.category,
-							model: stockIn.model,
-							quantity: newQuantity,
-							brand: stockIn.brand,
-							code: stockIn.code,
-							status: stockIn.status,
-						});
-					}
-					
-					// 6. Refresh data and show success
+					// 4. Refresh data and show success
 					await refetch();
+					await refetchItemData(); // Ensure we get the latest item data
 					await Swal.fire({
 						icon: 'success',
 						title: 'Stock In Added Successfully',

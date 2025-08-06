@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const stockInOutAcceApiSlice = createApi({
   reducerPath: 'stockInOutAcceApi',
   baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL }),
-  tagTypes: ['StockInOutAcce'],
+  tagTypes: ['StockInOutAcce', 'ItemAcce'],
   endpoints: (builder) => ({
     getStockInOuts: builder.query({
       query: () => 'stockInOutAcce/route',
@@ -31,7 +31,7 @@ export const stockInOutAcceApiSlice = createApi({
         method: 'POST',
         body: newStockIn,
       }),
-      invalidatesTags: ['StockInOutAcce'],
+      invalidatesTags: ['StockInOutAcce', 'ItemAcce'],
     }),
     addStockOut: builder.mutation({
       query: (newStockOut) => ({
@@ -39,7 +39,7 @@ export const stockInOutAcceApiSlice = createApi({
         method: 'POST',
         body: newStockOut,
       }),
-      invalidatesTags: ['StockInOutAcce'],
+      invalidatesTags: ['StockInOutAcce', 'ItemAcce'],
     }),
     updateStockInOut: builder.mutation({
       query: (updatedStockInOut) => ({
@@ -47,7 +47,7 @@ export const stockInOutAcceApiSlice = createApi({
         method: 'PUT',
         body: updatedStockInOut,
       }),
-      invalidatesTags: ['StockInOutAcce'],
+      invalidatesTags: ['StockInOutAcce', 'ItemAcce'],
     }),
     deleteStockInOut: builder.mutation({
       query: (id) => ({

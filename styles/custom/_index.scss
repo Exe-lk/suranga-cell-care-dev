@@ -16,3 +16,13 @@
 .border-transparent {
 	--#{$prefix}border-opacity: 0;
 }
+
+// Remove spinner controls from number input fields
+input[type="number"] {
+	-moz-appearance: textfield;
+	&::-webkit-outer-spin-button,
+	&::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+}
