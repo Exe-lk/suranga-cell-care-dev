@@ -17,28 +17,51 @@ import useDarkMode from '../../../hooks/useDarkMode';
 
 
 const Index: NextPage = () => {
-	const [itemId, setItemId] = useState<string>('');
+	const [itemCode, setItemCode] = useState<string>('');
 	const [itemData, setItemData] = useState<any>(null);
 	const [loading, setLoading] = useState<boolean>(false);
+	const [itemLoading, setItemLoading] = useState<boolean>(false);
+	const [itemError, setItemError] = useState<boolean>(false);
 	const [updateStockInOut] = useUpdateStockInOutMutation();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { darkModeStatus } = useDarkMode();
 
-	// Fetch item data when itemId changes
-	const {
-		data: fetchedItemData,
-		error: itemError,
-		isLoading: itemLoading,
-		refetch: refetchItem
-	} = useGetItemAcceByIdQuery(itemId, {
-		skip: !itemId,
-	});
+	// Function to search item by code
+	const searchItemByCode = async (code: string) => {
+		try {
+			setItemLoading(true);
+			setItemError(false);
+			setItemData(null);
 
-	useEffect(() => {
-		if (fetchedItemData) {
-			setItemData(fetchedItemData);
+			const { data, error } = await supabase
+				.from('ItemManagementAcce')
+				.select('*')
+				.eq('code', code)
+				.single();
+
+			if (error) {
+				console.error('Error searching item by code:', error);
+				setItemError(true);
+				return null;
+			}
+
+			setItemData(data);
+			return data;
+		} catch (error) {
+			console.error('Error in searchItemByCode:', error);
+			setItemError(true);
+			return null;
+		} finally {
+			setItemLoading(false);
 		}
-	}, [fetchedItemData]);
+	};
+
+	// Function to refetch item data
+	const refetchItem = async () => {
+		if (itemCode) {
+			await searchItemByCode(itemCode);
+		}
+	};
 
 	useEffect(() => {
 		if (inputRef.current) {
@@ -48,7 +71,7 @@ const Index: NextPage = () => {
 
 	const formik = useFormik({
 		initialValues: {
-			itemId: '',
+			itemCode: '',
 			currentStock: '',
 			newStock: '',
 		},
@@ -56,8 +79,8 @@ const Index: NextPage = () => {
 		validate: (values) => {
 			const errors: Record<string, string> = {};
 			
-			if (!values.itemId) {
-				errors.itemId = 'Item ID is required';
+			if (!values.itemCode) {
+				errors.itemCode = 'Item Code is required';
 			}
 			
 			if (!values.newStock) {
@@ -124,7 +147,7 @@ const Index: NextPage = () => {
 				// Reset form
 				formik.resetForm();
 				setItemData(null);
-				setItemId('');
+				setItemCode('');
 
 			} catch (error: any) {
 				console.error('Error updating stock:', error);
@@ -139,16 +162,19 @@ const Index: NextPage = () => {
 		},
 	});
 
-	const handleItemSearch = () => {
-		if (!formik.values.itemId.trim()) {
+	const handleItemSearch = async () => {
+		if (!formik.values.itemCode.trim()) {
 			Swal.fire({
 				icon: 'warning',
-				title: 'Missing Item ID',
-				text: 'Please enter an Item ID to search',
+				title: 'Missing Item Code',
+				text: 'Please enter an Item Code to search',
 			});
 			return;
 		}
-		setItemId(formik.values.itemId.trim());
+		
+		const code = formik.values.itemCode.trim();
+		setItemCode(code);
+		await searchItemByCode(code);
 	};
 
 	const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -185,17 +211,17 @@ const Index: NextPage = () => {
 												</h5>
 												<div className='row g-3'>
 													<div className='col-md-8'>
-														<FormGroup id='itemId' label='Item ID'>
+														<FormGroup id='itemCode' label='Item Code'>
 															<Input
 																ref={inputRef}
 																type='text'
-																placeholder='Enter Item ID'
-																value={formik.values.itemId}
+																placeholder='Enter Item Code'
+																value={formik.values.itemCode}
 																onChange={formik.handleChange}
 																onKeyPress={handleKeyPress}
 																isValid={formik.isValid}
-																isTouched={formik.touched.itemId}
-																invalidFeedback={formik.errors.itemId}
+																isTouched={formik.touched.itemCode}
+																invalidFeedback={formik.errors.itemCode}
 																validFeedback='Looks good!'
 															/>
 														</FormGroup>
@@ -225,7 +251,7 @@ const Index: NextPage = () => {
 												{itemError && (
 													<div className='alert alert-danger mt-3'>
 														<Icon icon='Warning' className='me-2' />
-														Item not found. Please check the Item ID and try again.
+														Item not found. Please check the Item Code and try again.
 													</div>
 												)}
 											</CardBody>
@@ -378,7 +404,7 @@ const Index: NextPage = () => {
 																onClick={() => {
 																	formik.resetForm();
 																	setItemData(null);
-																	setItemId('');
+																	setItemCode('');
 																}}>
 																<Icon icon='Close' />
 																<span className='ms-2'>Clear</span>
@@ -399,7 +425,7 @@ const Index: NextPage = () => {
 													How to use this form:
 												</h6>
 												<ul className='text-muted mb-0'>
-													<li>Enter the Item ID in the search field</li>
+													<li>Enter the Item Code in the search field</li>
 													<li>Click "Search Item" or press Enter to find the item</li>
 													<li>Review the current item details and stock quantity</li>
 													<li>Enter the new stock quantity</li>
