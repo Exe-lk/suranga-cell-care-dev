@@ -28,8 +28,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         break;
       }
       case 'GET': {
-        const ItemAcces = await getItemAcces();
-        res.status(200).json(ItemAcces);
+        const { page, perPage, searchTerm } = req.query;
+        
+        // If pagination parameters are provided, handle pagination
+        if (page && perPage) {
+          const pageNumber = parseInt(page as string, 10) || 1;
+          const perPageNumber = parseInt(perPage as string, 10) || 10;
+          const searchTermStr = (searchTerm as string) || '';
+          
+          try {
+            // Get all items first
+            const allItems = await getItemAcces();
+            
+            // Filter items if search term is provided
+            let filteredItems = allItems;
+            if (searchTermStr) {
+              const searchTermLower = searchTermStr.toLowerCase();
+              filteredItems = allItems.filter((item: any) => {
+                return (
+                  item.code?.toString().toLowerCase().includes(searchTermLower.slice(0, 4)) ||
+                  item.category?.toLowerCase().includes(searchTermLower) ||
+                  item.brand?.toLowerCase().includes(searchTermLower) ||
+                  item.model?.toLowerCase().includes(searchTermLower) ||
+                  (item.brand + ' ' + item.model)?.toLowerCase().includes(searchTermLower) ||
+                  (item.category + ' ' + item.brand + ' ' + item.model)?.toLowerCase().includes(searchTermLower) ||
+                  (item.category + ' ' + item.model + ' ' + item.brand)?.toLowerCase().includes(searchTermLower)
+                );
+              });
+            }
+            
+            // Sort by code in descending order
+            filteredItems.sort((a: any, b: any) => {
+              const aCode = parseInt(a.code?.toString() || '0', 10);
+              const bCode = parseInt(b.code?.toString() || '0', 10);
+              return bCode - aCode;
+            });
+            
+            // Implement pagination
+            const startIndex = (pageNumber - 1) * perPageNumber;
+            const endIndex = startIndex + perPageNumber;
+            const paginatedItems = filteredItems.slice(startIndex, endIndex);
+            
+            // Calculate pagination info
+            const totalItems = filteredItems.length;
+            const totalPages = Math.ceil(totalItems / perPageNumber);
+            const hasNextPage = pageNumber < totalPages;
+            const hasPrevPage = pageNumber > 1;
+            
+            res.status(200).json({
+              data: paginatedItems,
+              pagination: {
+                currentPage: pageNumber,
+                perPage: perPageNumber,
+                totalItems,
+                totalPages,
+                hasNextPage,
+                hasPrevPage
+              },
+              lastDoc: hasNextPage ? endIndex : null
+            });
+          } catch (error) {
+            console.error('Error fetching paginated items:', error);
+            res.status(500).json({ error: 'Failed to fetch items' });
+          }
+        } else {
+          // Return all items without pagination
+          const ItemAcces = await getItemAcces();
+          res.status(200).json(ItemAcces);
+        }
         break;
       }
       case 'PUT': {

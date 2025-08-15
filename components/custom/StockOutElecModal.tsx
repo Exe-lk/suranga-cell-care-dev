@@ -143,25 +143,26 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 
 	const getsubstock = async () => {
 		try {
+			console.log(stockOutData)
 			// Step 1: Fetch matching stocks
 			const { data: stocks, error: stockError } = await supabase
 				.from('Stock')
-				.select('id') // we only need id
+				.select('barcode') // we only need id
 				.eq('stock', 'stockIn')
 				.eq('barcodePrefix', stockOutData?.code);
 	
 			if (stockError) {
 				throw stockError;
 			}
-	
+			console.log(stocks)
 			if (!stocks || stocks.length === 0) {
 				setSubstockInData([]);
 				return;
 			}
-	console.log(stocks)
+
 			// Step 2: Fetch substock for all matched stocks
-			const stockIds = stocks.map((stock) => stock.id);
-	
+			const stockIds = stocks.map((stock) => stock.barcode);
+	console.log(stockIds)
 			const { data: subStocks, error: subStockError } = await supabase
 				.from('subStock')
 				.select('*')
@@ -170,7 +171,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			if (subStockError) {
 				throw subStockError;
 			}
-
+console.log(subStocks)
 			setSubstockInData(subStocks || []);
 		} catch (error) {
 			console.error('Error fetching substock data:', error);
@@ -278,6 +279,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				
 				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
 				selecteditems.map(async (val: any) => {
+					console.log(val)
 					const id = val.value.split('-')[0];
 					const subid = val.label;
 					const values = {
@@ -288,25 +290,25 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				
 				});
 
-				if(values.billNumber!=""){
-					const data = {
-						stock: {
-						  item: selecteditems,
-						  stockid: id,
-						  category: values.category,
-						  model: values.model,
-						  brand: values.brand,
-						  quantity:values.quantity
-						}
-					  };
+				// if(values.billNumber!=""){
+				// 	const data = {
+				// 		stock: {
+				// 		  item: selecteditems,
+				// 		  stockid: id,
+				// 		  category: values.category,
+				// 		  model: values.model,
+				// 		  brand: values.brand,
+				// 		  quantity:values.quantity
+				// 		}
+				// 	  };
 					  
-					  const billRef = doc(firestore, 'bill', values.billNumber);
+				// 	  const billRef = doc(firestore, 'bill', values.billNumber);
 					  
-					  // Use arrayUnion to add the new stock object to the 'stock' array in Firestore
-					  await updateDoc(billRef, {
-						stock: arrayUnion(data.stock)
-					  });
-				}
+				// 	  // Use arrayUnion to add the new stock object to the 'stock' array in Firestore
+				// 	  await updateDoc(billRef, {
+				// 		stock: arrayUnion(data.stock)
+				// 	  });
+				// }
 				
 				refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });

@@ -17,7 +17,7 @@ import FormGroup from '../components/bootstrap/forms/FormGroup';
 import Input from '../components/bootstrap/forms/Input';
 import Swal from 'sweetalert2';
 import Logo from '../components/Logo';
-import { useAddUserMutation } from '../redux/slices/userApiSlice';
+import { SignInUser } from '../service/authentication';
 
 interface ILoginHeaderProps {
 	isNewUser?: boolean;
@@ -39,7 +39,6 @@ interface ILoginProps {
 const Login: NextPage<ILoginProps> = ({ isSignUp }) => {
 	const router = useRouter();
 	const { darkModeStatus } = useDarkMode();
-	const [addUser] = useAddUserMutation();
 
 	const formik = useFormik({
 		enableReinitialize: true,
@@ -63,19 +62,23 @@ const Login: NextPage<ILoginProps> = ({ isSignUp }) => {
 		},
 		onSubmit: async (values) => {
 			try {
-				const response = await addUser(values).unwrap();
-				const email = response.user.email;
-				localStorage.setItem('email', email);
-				if (response.user) {
+				const response = await SignInUser(values.email, values.password);
+				
+				if (response && response.user && response.user.email) {
+					const email = response.user.email;
+					localStorage.setItem('email', email);
+					
 					await Swal.fire({
 						icon: 'success',
 						title: 'Login Successful',
 						text: 'You have successfully logged in!',
 					});
-					localStorage.setItem('userRole', response.user.position);
-					localStorage.setItem('level', response.user.level);
-					console.log(response.user.level)
-					switch (response.user.position) {
+					
+					localStorage.setItem('userRole', response.position);
+					localStorage.setItem('level', response.level);
+					console.log(response.level);
+					
+					switch (response.position) {
 						case 'admin':
 							router.push('/admin/dashboard');
 							break;
@@ -103,20 +106,16 @@ const Login: NextPage<ILoginProps> = ({ isSignUp }) => {
 						default:
 							break;
 					}
+				} else {
+					await Swal.fire('Error', 'Invalid email or password. Please try again.', 'error');
 				}
 			} catch (error: any) {
 				console.error('Login Error:', error);
-				if (error.status === 404) {
-					await Swal.fire('Error', 'Email not found. Please try again.', 'error');
-				} else if (error.status === 401) {
-					await Swal.fire('Error', 'Password is incorrect. Please try again.', 'error');
-				} else {
-					await Swal.fire(
-						'Error',
-						'An unexpected error occurred. Please try again.',
-						'error',
-					);
-				}
+				await Swal.fire(
+					'Error',
+					'An unexpected error occurred. Please try again.',
+					'error',
+				);
 			}
 		},
 	});

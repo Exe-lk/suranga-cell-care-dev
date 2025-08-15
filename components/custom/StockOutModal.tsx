@@ -11,7 +11,6 @@ import Button from '../bootstrap/Button';
 import Select from '../bootstrap/forms/Select';
 import Swal from 'sweetalert2';
 import Checks, { ChecksGroup } from '../bootstrap/forms/Checks';
-import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 
 interface StockAddModalProps {
@@ -19,6 +18,7 @@ interface StockAddModalProps {
 	isOpen: boolean;
 	setIsOpen(...args: unknown[]): unknown;
 	quantity: any;
+	refetch: () => void;
 }
 
 const formatTimestamp = (seconds: number, nanoseconds: number): string => {
@@ -37,7 +37,7 @@ const formatTimestamp = (seconds: number, nanoseconds: number): string => {
 };
 
 interface StockOut {
-	cid: string;
+	id: string;
 	model: string;
 	brand: string;
 	category: string;
@@ -54,9 +54,9 @@ interface StockOut {
 	description: string;
 }
 
-const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity }) => {
+const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
 	const [stockOut, setStockOut] = useState<StockOut>({
-		cid: '',
+		id: '',
 		model: '',
 		brand: '',
 		category: '',
@@ -73,6 +73,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		description: '',
 	});
 	const [selectedCost, setSelectedCost] = useState<string | null>(null);
+	const [barcodeSearch, setBarcodeSearch] = useState<string>('');
 	const {
 		data: stockInData,
 		isLoading: stockInLoading,
@@ -80,8 +81,6 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	} = useGetStockInOutsQuery(undefined);
 	const [addstockOut] = useAddStockOutMutation();
 	const { data: stockOutData, isSuccess } = useGetItemAcceByIdQuery(id);
-	const [updateStockInOut] = useUpdateStockInOutMutation();
-	const { refetch } = useGetItemAccesQuery(undefined);
 
 	useEffect(() => {
 		if (isSuccess && stockOutData) {
@@ -89,20 +88,25 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		}
 	}, [isSuccess, stockOutData]);
 
+	// Filter for accessory stock-in items only
 	const filteredStockIn = stockInData?.filter(
-		(item: { stock: string }) => item.stock === 'stockIn',
+		(item: { stock: string; type: string }) => 
+			item.stock === 'stockIn',
 	);
-	const handleDateInChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-	const selectedBarcode = e.target.value;
-	formik.setFieldValue("barcode", selectedBarcode);
-	const selectedStock = filteredStockIn?.find(
-		(item: { barcode: string }) => item.barcode === selectedBarcode
+
+	const handleBarcodeSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const searchValue = e.target.value;
+		setBarcodeSearch(searchValue);
+		formik.setFieldValue("barcode", searchValue);
+		
+		// Check if typed value matches any barcode exactly
+		const matchedStock = filteredStockIn?.find(
+			(item: { barcode: string }) => item.barcode === searchValue
 	);
-	setSelectedCost(selectedStock ? selectedStock.cost : null);
+		setSelectedCost(matchedStock ? matchedStock.cost : null);
 };
 
 	const stockInQuantity = quantity;
-
 	const formik = useFormik({
 		initialValues: {
 			brand: stockOut.brand,
@@ -205,6 +209,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				// Clone values and ensure numeric fields are properly formatted
 				const processedValues = {
 					...values,
+					id: id, // include id for backend to update item quantity
 					quantity: Number(values.quantity),
 					sellingPrice: Number(values.sellingPrice),
 					cost: values.cost ? Number(values.cost) : null,
@@ -215,9 +220,9 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				console.log("Submitting stock-out with values:", processedValues);
 				
 				const response = await addstockOut(processedValues).unwrap();
+
 				console.log("Stock-out created response:", response);
-				await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
-				refetch();
+				await refetch();
 				await Swal.fire({ icon: 'success', title: 'Stock Out Created Successfully' });
 				formik.resetForm();
 				setIsOpen(false);
@@ -244,6 +249,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				setIsOpen={() => {
 					setIsOpen(false);
 					setSelectedCost(null);
+					setBarcodeSearch('');
 					formik.resetForm();
 				}}
 				className='p-4'>
@@ -292,19 +298,21 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 						/>
 					</FormGroup>
 					<FormGroup id='barcode' label='Barcode' className='col-md-6'>
-						<Select
-							id='barcode'
-							name='barcode'
-							ariaLabel='barcode'
-							onChange={handleDateInChange}
-							value={formik.values.barcode}
-							onBlur={formik.handleBlur}
+						<input
+							type='text'
 							className={`form-control ${
 								formik.touched.barcode && formik.errors.barcode ? 'is-invalid' : ''
-							}`}>
-							<option value=''>Select a Barcode</option>
-							{stockInLoading && <option>Loading barcodes...</option>}
-							{stockInError && <option>Error fetching barcodes</option>}
+							}`}
+							list='barcode-options'
+							placeholder='Type or select barcode'
+							value={formik.values.barcode}
+							onChange={handleBarcodeSearchChange}
+							onBlur={formik.handleBlur}
+							name='barcode'
+						/>
+						<datalist id='barcode-options'>
+							{stockInLoading && <option value=''>Loading barcodes...</option>}
+							{stockInError && <option value=''>Error fetching barcodes</option>}
 							{filteredStockIn?.map(
 								(
 									item: {
@@ -313,16 +321,16 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 									},
 									index: any,
 								) => (
-									<option key={index} value={item.barcode}>
-										{item.barcode}
-									</option>
+									<option key={index} value={item.barcode} />
 								),
 							)}
-							{formik.touched.barcode && formik.errors.barcode && (
-								<div className='invalid-feedback'>{formik.errors.barcode}</div>
-							)}
-						</Select>
+						</datalist>
 					</FormGroup>
+					{formik.touched.barcode && formik.errors.barcode && (
+						<div className='col-md-6'>
+							<div className='invalid-feedback d-block'>{formik.errors.barcode}</div>
+						</div>
+					)}
 
 					{selectedCost && (
 						<FormGroup id='cost' label='Cost(Per Unit)' className='col-md-6'>

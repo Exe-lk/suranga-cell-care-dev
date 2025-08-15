@@ -30,6 +30,7 @@ import { toPng, toSvg } from 'html-to-image';
 import {
 	useGetItemDiss1Query,
 	useUpdateItemDisMutation,
+	useAddItemDisMutation,
 } from '../../../redux/slices/itemManagementDisApiSlice';
 import { useGetItemDissQuery } from '../../../redux/slices/itemManagementDisApiSlice';
 import PaginationButtons, {
@@ -48,6 +49,8 @@ const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+	const [categoryFilter, setCategoryFilter] = useState<string>('');
+	const [brandFilter, setBrandFilter] = useState<string>('');
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [returnModalStatus, setReturnModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
@@ -65,7 +68,8 @@ const Index: NextPage = () => {
 		error,
 		isLoading,
 		refetch,
-	} = useGetItemDissQuery(debouncedSearchTerm);
+	} = useGetItemDissQuery(undefined);
+
 	const {
 		data: StockInOuts,
 		error: stockInOutError,
@@ -413,6 +417,65 @@ const Index: NextPage = () => {
 		setSearchTerm(value);
 	};
 
+	const [addItemDis] = useAddItemDisMutation();
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const handleImportClick = () => {
+		if (fileInputRef.current) fileInputRef.current.value = '';
+		fileInputRef.current?.click();
+	};
+
+	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		const text = await file.text();
+		const lines = text.split(/\r?\n/).filter(Boolean);
+		if (lines.length < 2) {
+			Swal.fire('Error', 'CSV must have at least one data row.', 'error');
+			return;
+		}
+		// Parse header
+		const header = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+		const expected = ['Code','Model','Brand','Category','Quantity','Box Number'];
+		if (header.length < 6 || !expected.every((h, i) => header[i] === h)) {
+			Swal.fire('Error', 'CSV header must be: Code, Model, Brand, Category, Quantity, Box Number', 'error');
+			return;
+		}
+		// Parse rows
+		let success = 0, fail = 0;
+		for (let i = 1; i < lines.length; ++i) {
+			const row = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+			if (row.length < 6) { fail++; continue; }
+			const [code, model, brand, category, quantity, boxNumber] = row;
+			// Compose the object for the API
+			const item = {
+				code,
+				model,
+				brand,
+				category,
+				quantity: isNaN(Number(quantity)) ? 0 : Number(quantity),
+				boxNumber: isNaN(Number(boxNumber)) ? '' : boxNumber,
+				status: true
+			};
+			try {
+				await addItemDis(item).unwrap();
+				success++;
+			} catch (err) {
+				fail++;
+			}
+		}
+		refetch();
+		Swal.fire('Import Complete', `Imported: ${success}, Failed: ${fail}`, fail ? 'warning' : 'success');
+	};
+
+	const [startDate, setStartDate] = useState<string>(() => {
+		const today = new Date();
+		const yyyy = today.getFullYear();
+		const mm = String(today.getMonth() + 1).padStart(2, '0');
+		const dd = String(today.getDate()).padStart(2, '0');
+		return `${yyyy}-${mm}-${dd}`;
+	});
+
 	return (
 		<PageWrapper>
 			<SubHeader>
@@ -431,6 +494,27 @@ const Index: NextPage = () => {
 						value={searchTerm}
 						ref={inputRef}
 					/>
+					<select
+						className='form-select me-2'
+						value={categoryFilter}
+						onChange={(e) => setCategoryFilter(e.target.value)}
+						style={{ minWidth: '120px' }}>
+						<option value=''>All Categories</option>
+						<option value='Displays'>Display</option>
+						<option value='Battery Cell'>Battery</option>
+						<option value='Screens'>Screens</option>
+						<option value='Touch Pad'>Touch Pad</option>
+					</select>
+					<select
+						className='form-select me-2'
+						value={brandFilter}
+						onChange={(e) => setBrandFilter(e.target.value)}
+						style={{ minWidth: '120px' }}>
+						<option value=''>All Brands</option>
+						{itemDiss?.map((item: any) => item.brand).filter((brand: string, index: number, arr: string[]) => arr.indexOf(brand) === index).map((brand: string) => (
+							<option key={brand} value={brand}>{brand}</option>
+						))}
+					</select>
 				</SubHeaderLeft>
 				<SubHeaderRight>
 					{showLowStockAlert && (
@@ -516,6 +600,16 @@ const Index: NextPage = () => {
 						onClick={() => setAddModalStatus(true)}>
 						Create Item
 					</Button>
+					<Button icon='UploadFile' color='info' isLight onClick={handleImportClick} style={{marginRight: 8}}>
+						Import CSV
+					</Button>
+					<input
+						type='file'
+						accept='.csv,text/csv'
+						ref={fileInputRef}
+						style={{ display: 'none' }}
+						onChange={handleFileChange}
+					/>
 				</SubHeaderRight>
 			</SubHeader>
 			<Page>
@@ -587,6 +681,27 @@ const Index: NextPage = () => {
 											)}
 											{itemDiss &&
 												dataPagination(itemDiss, currentPage, perPage)
+													.filter((item: any) => {
+														if (!searchTerm) return true;
+														const codeStr = item.code?.toString().toLowerCase() || '';
+														const modelStr = item.model?.toLowerCase() || '';
+														const search = searchTerm.toLowerCase();
+														const searchFirst4 = search.slice(0, 4);
+														
+														return codeStr.includes(searchFirst4) || modelStr.includes(search);
+													})
+													.filter((item: any) => {
+														// Apply category filter
+														if (categoryFilter && item.category !== categoryFilter) {
+															return false;
+														}
+														// Apply brand filter
+														if (brandFilter && item.brand !== brandFilter) {
+															return false;
+														}
+														return true;
+													})
+													.sort((a, b) => b.code - a.code)
 													.map((item: any, index: any) => (
 														<React.Fragment key={index}>
 															<tr key={index} style={getRowStyle(item)}>

@@ -41,6 +41,8 @@ export interface IInputProps extends HTMLAttributes<HTMLInputElement>, Partial<I
 	onInput?(...args: unknown[]): unknown;
 	onInvalid?(...args: unknown[]): unknown;
 	onSelect?(...args: unknown[]): unknown;
+	onKeyDown?(...args: unknown[]): unknown;
+	disableArrowKeys?: boolean;
 	/**
 	 * Mask string. Format characters are:
 	 * * `9`: `0-9`
@@ -89,6 +91,8 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
 			onInput,
 			onInvalid,
 			onSelect,
+			onKeyDown,
+			disableArrowKeys = true,
 			component,
 			// InputMask & NumberFormat props
 			mask,
@@ -98,6 +102,18 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
 		},
 		ref,
 	) => {
+		// Handle arrow key disabling for numeric inputs
+		const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+			if (type === 'number' && disableArrowKeys) {
+				if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+					event.preventDefault();
+				}
+			}
+			if (onKeyDown) {
+				onKeyDown(event);
+			}
+		};
+
 		const PROPS = {
 			id,
 			name: name === null ? id : name,
@@ -135,6 +151,7 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
 			onInput,
 			onInvalid,
 			onSelect,
+			onKeyDown: handleKeyDown,
 			...props,
 		};
 		const NUMBER_FORMAT_PROPS = {
@@ -146,8 +163,12 @@ const Input = forwardRef<HTMLInputElement, IInputProps>(
 			onInput: () => onInput,
 			onInvalid: () => onInvalid,
 			onSelect: () => onSelect,
+			onKeyDown: handleKeyDown,
 		};
-		const MASK_PROPS = { mask };
+		const MASK_PROPS = { 
+			mask,
+			onKeyDown: handleKeyDown,
+		};
 
 		const LIST = list && (
 			<Portal>
@@ -307,6 +328,14 @@ Input.propTypes = {
 	 */
 	onSelect: PropTypes.func,
 	/**
+	 * Fires when a key is pressed down
+	 */
+	onKeyDown: PropTypes.func,
+	/**
+	 * When true, disables arrow key increment/decrement for number inputs
+	 */
+	disableArrowKeys: PropTypes.bool,
+	/**
 	 * More information, [react-input-mask](https://github.com/sanniassin/react-input-mask#react-input-mask).
 	 */
 	mask: PropTypes.string,
@@ -314,6 +343,7 @@ Input.propTypes = {
 	 * More information, [react-number-format](https://github.com/s-yadav/react-number-format#readme).
 	 */
 	format: PropTypes.string,
+	accept: PropTypes.string,
 };
 Input.defaultProps = {
 	component: undefined,
@@ -349,6 +379,8 @@ Input.defaultProps = {
 	onInput: undefined,
 	onInvalid: undefined,
 	onSelect: undefined,
+	onKeyDown: undefined,
+	disableArrowKeys: true,
 	mask: undefined,
 	format: undefined,
 	accept: undefined,

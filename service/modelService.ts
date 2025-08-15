@@ -106,13 +106,13 @@
 // };
 import { supabase } from '../lib/supabase';
 
-export const createModel = async (name: string, brand: string, category: string) => {
+export const createModel = async (name: string, brand: string, category: string, description: string) => {
   const status = true;
   const timestamp = new Date();
 
   const { data, error } = await supabase
     .from('ModelDisplay')
-    .insert([{ name, brand, category, status }])
+    .insert([{ name, brand, category, description, status }])
     .select()
     .single();
 
@@ -172,7 +172,8 @@ export const updateModel = async (
   name: string,
   brand: string,
   category: string,
-  status: boolean
+  status: boolean,
+  description: string
 ) => {
   const { data: modelData, error: modelError } = await supabase
     .from('ModelDisplay')
@@ -189,7 +190,7 @@ export const updateModel = async (
 
   await supabase
     .from('ModelDisplay')
-    .update({ name, brand, category, status })
+    .update({ name, brand, category, status, description })
     .eq('id', id);
 
   const { data: itemDocs, error: itemError } = await supabase

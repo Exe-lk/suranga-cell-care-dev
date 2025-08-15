@@ -14,6 +14,7 @@ import Page from '../../../layout/Page/Page';
 import Card, { CardBody, CardTitle } from '../../../components/bootstrap/Card';
 import UserAddModal from '../../../components/custom/technicianAddModal';
 import UserEditModal from '../../../components/custom/technicianEditModal';
+import TechnicianStockOutModal from '../../../components/custom/technicianStockOutModal';
 import { doc, deleteDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
 import { firestore } from '../../../firebaseConfig';
 import Dropdown, { DropdownToggle, DropdownMenu } from '../../../components/bootstrap/Dropdown';
@@ -44,6 +45,8 @@ const Index: NextPage = () => {
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
+	const [stockOutModalStatus, setStockOutModalStatus] = useState<boolean>(false);
+	const [selectedTechnician, setSelectedTechnician] = useState<any>(null);
 	const [id, setId] = useState<string>('');
 	const { data: technicians, error, isLoading } = useGetTechniciansQuery(debouncedSearchTerm);
 	const [currentPage, setCurrentPage] = useState<number>(1);
@@ -77,6 +80,11 @@ const Index: NextPage = () => {
 			console.error('Error deleting document: ', error);
 			Swal.fire('Error', 'Failed to delete Technician.', 'error');
 		}
+	};
+
+	const handleViewStockOut = (technician: any) => {
+		setSelectedTechnician(technician);
+		setStockOutModalStatus(true);
 	};
 
 	const handleExport = async (format: string) => {
@@ -430,6 +438,12 @@ const Index: NextPage = () => {
 														<td>{technician.mobileNumber}</td>
 														<td>
 															<Button
+																icon='Visibility'
+																color='info'
+																onClick={() => handleViewStockOut(technician)}>
+																View
+															</Button>
+															<Button
 																icon='Edit'
 																color='primary'
 																onClick={() => (
@@ -474,6 +488,12 @@ const Index: NextPage = () => {
 			<UserAddModal setIsOpen={setAddModalStatus} isOpen={addModalStatus} id='' />
 			<UserEditModal setIsOpen={setEditModalStatus} isOpen={editModalStatus} id={id} />
 			<SellerDeleteModal setIsOpen={setDeleteModalStatus} isOpen={deleteModalStatus} id='' />
+			<TechnicianStockOutModal
+				setIsOpen={setStockOutModalStatus}
+				isOpen={stockOutModalStatus}
+				technicianId={selectedTechnician?.technicianNum || ''}
+				technicianName={selectedTechnician?.name || ''}
+			/>
 		</PageWrapper>
 	);
 };

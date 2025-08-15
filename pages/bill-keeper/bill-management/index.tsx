@@ -17,6 +17,7 @@ import Card, { CardBody, CardTitle } from '../../../components/bootstrap/Card';
 import BillAddModal from '../../../components/custom/BillAddModal';
 import BillDeleteModal from '../../../components/custom/BillDeleteModal';
 import BillEditModal from '../../../components/custom/BillEditModal1';
+import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle } from '../../../components/bootstrap/Modal';
 import Swal from 'sweetalert2';
 import { useUpdateBillMutation, useGetBillsQuery } from '../../../redux/slices/billApiSlice';
 import { toPng, toSvg } from 'html-to-image';
@@ -37,6 +38,10 @@ const Index: NextPage = () => {
 	const [addModalStatus, setAddModalStatus] = useState<boolean>(false);
 	const [deleteModalStatus, setDeleteModalStatus] = useState<boolean>(false);
 	const [editModalStatus, setEditModalStatus] = useState<boolean>(false);
+	const [costEditModalStatus, setCostEditModalStatus] = useState<boolean>(false);
+	const [selectedBill, setSelectedBill] = useState<any>(null);
+	const [componentCost, setComponentCost] = useState<string>('');
+	const [repairCost, setRepairCost] = useState<string>('');
 	const [id, setId] = useState<string>('');
 	const { data: bills, error, isLoading ,refetch} = useGetBillsQuery(undefined);
 	const [updateBill] = useUpdateBillMutation();
@@ -47,6 +52,61 @@ const Index: NextPage = () => {
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	// Handle cost editing modal
+	const handleCostEdit = (bill: any) => {
+		setSelectedBill(bill);
+		setComponentCost(bill.componentCost?.toString() || '');
+		setRepairCost(bill.repairCost?.toString() || '');
+		setCostEditModalStatus(true);
+	};
+
+	// Update only costs
+	const handleCostUpdate = async () => {
+		if (!selectedBill) return;
+
+		try {
+			const componentCostNum = parseFloat(componentCost) || 0;
+			const repairCostNum = parseFloat(repairCost) || 0;
+			const totalCost = componentCostNum + repairCostNum;
+
+			const values = {
+				id: selectedBill.billNumber,
+				billNumber: selectedBill.billNumber,
+				dateIn: selectedBill.dateIn,
+				phoneDetail: selectedBill.phoneDetail,
+				phoneModel: selectedBill.phoneModel,
+				repairType: selectedBill.repairType,
+				technicianNum: selectedBill.technicianNum,
+				CustomerName: selectedBill.CustomerName,
+				CustomerMobileNum: selectedBill.CustomerMobileNum,
+				email: selectedBill.email,
+				NIC: selectedBill.NIC,
+				componentCost: componentCostNum,
+				repairCost: repairCostNum,
+				totalCost: totalCost,
+				Price: selectedBill.Price,
+				Status: selectedBill.Status,
+				DateOut: selectedBill.DateOut,
+				status: selectedBill.status,
+				Condition: selectedBill.Condition,
+				Item: selectedBill.Item,
+				color: selectedBill.color,
+				IME: selectedBill.IME,
+			};
+
+			await updateBill(values);
+			setCostEditModalStatus(false);
+			setSelectedBill(null);
+			setComponentCost('');
+			setRepairCost('');
+			refetch();
+			Swal.fire('Success!', 'Costs have been updated successfully.', 'success');
+		} catch (error) {
+			console.error('Error updating costs:', error);
+			Swal.fire('Error!', 'Failed to update costs.', 'error');
+		}
+	};
 
 	const filteredTransactions = bills?.filter((trans: any) => {
 		const transactionDateIn = new Date(trans.dateIn);
@@ -90,7 +150,7 @@ const Index: NextPage = () => {
 					NIC: bill.NIC,
 					componentCost: bill.componentCost,
 					repairCost: bill.repairCost,
-					cost: bill.cost,
+					totalCost: bill.totalCost,
 					Price: bill.Price,
 					Status: bill.Status,
 					DateOut: bill.DateOut,
@@ -394,7 +454,7 @@ const Index: NextPage = () => {
 					NIC: billToUpdate.NIC,
 					componentCost: billToUpdate.componentCost,
 					repairCost: billToUpdate.repairCost,
-					cost: billToUpdate.cost,
+					totalCost: billToUpdate.totalCost,
 					Price: billToUpdate.Price,
 					Status: value, // Use the new status value
 					DateOut: billToUpdate.DateOut,
@@ -688,6 +748,12 @@ const Index: NextPage = () => {
 																	setId(bill.id)
 																)}></Button>
 															{/* <Button
+																icon='AttachMoney'
+																color='warning'
+																className='ms-2'
+																onClick={() => handleCostEdit(bill)}
+																title='Edit Costs'></Button> */}
+															{/* <Button
 																className='m-2'
 																icon='Delete'
 																color='danger'
@@ -721,6 +787,62 @@ const Index: NextPage = () => {
 			<BillAddModal setIsOpen={setAddModalStatus} isOpen={addModalStatus} id='' />
 			<BillDeleteModal setIsOpen={setDeleteModalStatus} isOpen={deleteModalStatus} id='' />
 			<BillEditModal setIsOpen={setEditModalStatus} isOpen={editModalStatus} id={id} />
+			
+			{/* Cost Edit Modal */}
+			{/* <Modal
+				isOpen={costEditModalStatus}
+				setIsOpen={setCostEditModalStatus}
+				size='lg'
+				titleId='costEditModal'>
+				<ModalHeader setIsOpen={setCostEditModalStatus}>
+					<ModalTitle id='costEditModal'>Edit Costs</ModalTitle>
+				</ModalHeader>
+				<ModalBody>
+					<div className='row g-3'>
+						<FormGroup id='componentCost' label='Component Cost' className='col-md-6'>
+							<Input
+								type='number'
+								step={0.01}
+								min={0}
+								value={componentCost}
+								onChange={(e: any) => setComponentCost(e.target.value)}
+								placeholder='Enter component cost'
+							/>
+						</FormGroup>
+						<FormGroup id='repairCost' label='Repair Cost' className='col-md-6'>
+							<Input
+								type='number'
+								step={0.01}
+								min={0}
+								value={repairCost}
+								onChange={(e: any) => setRepairCost(e.target.value)}
+								placeholder='Enter repair cost'
+							/>
+						</FormGroup>
+						<div className='col-12'>
+							<div className='alert alert-info'>
+								<strong>Total Cost: </strong>
+								{((parseFloat(componentCost) || 0) + (parseFloat(repairCost) || 0)).toFixed(2)}
+							</div>
+						</div>
+					</div>
+				</ModalBody>
+				<ModalFooter>
+					<Button
+						color='secondary'
+						onClick={() => {
+							setCostEditModalStatus(false);
+							setSelectedBill(null);
+							setComponentCost('');
+							setRepairCost('');
+						}}>
+						Cancel
+					</Button>
+					<Button color='primary' onClick={handleCostUpdate}>
+						Update Costs
+					</Button>
+				</ModalFooter>
+			</Modal> */}
 		</PageWrapper>
 	);
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { NextPage } from 'next';
 import PageWrapper from '../../../layout/PageWrapper/PageWrapper';
-import SubHeader, { SubHeaderLeft } from '../../../layout/SubHeader/SubHeader';
+import SubHeader, { SubHeaderLeft, SubHeaderRight } from '../../../layout/SubHeader/SubHeader';
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Button from '../../../components/bootstrap/Button';
@@ -23,11 +23,21 @@ import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { firestore } from '../../../firebaseConfig';
 
 import { supabase } from '../../../lib/supabase'; // adjust path if needed
+import Dropdown, { DropdownMenu, DropdownToggle } from '../../../components/bootstrap/Dropdown';
+import FormGroup from '../../../components/bootstrap/forms/FormGroup';
+// Utility function to get today's date in YYYY-MM-DD format
+const getTodayDateString = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 const Index: NextPage = () => {
 	// const { data: StockInOuts, error, isLoading, refetch } = useGetStockInOutsQuery(undefined);
 	const [updateSubStockInOut] = useUpdateSubStockInOutMutation();
 	const [searchTerm, setSearchTerm] = useState('');
-	const [startDate, setStartDate] = useState<string>('');
+	const [startDate, setStartDate] = useState<string>(getTodayDateString());
 	const [endDate, setEndDate] = useState<string>('');
 	const [StockInOuts, setStockInOuts] = useState<string[]>([]);
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -62,13 +72,14 @@ const Index: NextPage = () => {
 	const selectitem = async (id: any, index: any) => {
 		try {
 			// Fetch substocks where stock_id = id
+			console.log(index)
 			const { data: subStock, error } = await supabase
 				.from('subStock')
 				.select('*')
-				.eq('stock_id', id);
+				.eq('stock_id', index);
 	
 			if (error) throw error;
-	
+	console.log(subStock)
 			await setStockInOuts((prevStockInOuts) => {
 				return prevStockInOuts.map((item: any) =>
 					item.barcode === index ? { ...item, subStock: subStock || [] } : item,
@@ -84,13 +95,14 @@ const Index: NextPage = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const { data: stocks, error } = await supabase
+				if(startDate){
+					const { data: stocks, error } = await supabase
 					.from('Stock')
 					.select('id, barcode, barcodePrefix, boxNumber, brand, category, code, cost, date, description, itemId, model, printlable, quantity, sellingPrice, status, stock, suppName, billNumber, branchNum, dateIn, sellectedItem, sellerName, sellingPrice, technicianNum')
 					.eq('status', true)
-					.eq('stock', 'stockIn');
-	
-				if (error) throw error;
+					.eq('stock', 'stockIn')
+					.eq('date',startDate);
+					if (error) throw error;
 	
 				const mappedStocks:any = stocks.map((stock) => ({
 					...stock,
@@ -98,12 +110,31 @@ const Index: NextPage = () => {
 				}));
 	
 				setStockInOuts(mappedStocks);
+				}else{
+					const { data: stocks, error } = await supabase
+					.from('Stock')
+					.select('id, barcode, barcodePrefix, boxNumber, brand, category, code, cost, date, description, itemId, model, printlable, quantity, sellingPrice, status, stock, suppName, billNumber, branchNum, dateIn, sellectedItem, sellerName, sellingPrice, technicianNum')
+					.eq('status', true)
+					.eq('stock', 'stockIn')
+					if (error) throw error;
+	
+				const mappedStocks:any = stocks.map((stock) => ({
+					...stock,
+					subStock: [{}], // initially empty
+				}));
+	
+				setStockInOuts(mappedStocks);
+					
+				}
+				
+	
+				
 			} catch (error) {
 				console.error('Error fetching stocks: ', error);
 			}
 		};
 		fetchData();
-	}, []);
+	}, [startDate]);
 
 	useEffect(() => {
 		if (inputRef.current) {
@@ -317,6 +348,9 @@ const Index: NextPage = () => {
 	var errorCallback = function (errorMessage: any) {
 		// alert('Error: ' + errorMessage);
 	};
+	const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setStartDate(e.target.value);
+	};
 
 	return (
 		<PageWrapper>
@@ -337,6 +371,44 @@ const Index: NextPage = () => {
 						ref={inputRef}
 					/>
 				</SubHeaderLeft>
+				<SubHeaderRight>
+				<Dropdown>
+						<DropdownToggle hasIcon={false}>
+							<Button
+								icon='FilterAlt'
+								color='dark'
+								isLight
+								className='btn-only-icon position-relative'></Button>
+						</DropdownToggle>
+						<DropdownMenu isAlignmentEnd size='lg'>
+							<div className='container py-2'>
+								<div className='row g-3'>
+									
+									<FormGroup label='Date' className='col-12'>
+										<Input 
+											type='date' 
+											onChange={handleDateChange} 
+											value={startDate} 
+										/>
+									</FormGroup>
+									<div className='col-12 mt-2'>
+										<Button 
+											color='info' 
+											isLight 
+											className='w-100'
+											onClick={() => {
+												setStartDate('');
+												
+											}}
+										>
+											Clear Date Filter
+										</Button>
+									</div>
+								</div>
+							</div>
+						</DropdownMenu>
+					</Dropdown>
+				</SubHeaderRight>
 			</SubHeader>
 			<Page>
 				<div className='row h-100'>
@@ -383,9 +455,9 @@ const Index: NextPage = () => {
 										</tr>
 									</thead>
 									<tbody>
-										{filteredTransactions &&
+										{StockInOuts &&
 											dataPagination(
-												filteredTransactions,
+												StockInOuts,
 												currentPage,
 												perPage,
 											)
@@ -496,7 +568,7 @@ const Index: NextPage = () => {
 								</table>
 							</CardBody>
 							<PaginationButtons
-								data={filteredTransactions}
+								data={StockInOuts}
 								label='parts'
 								setCurrentPage={setCurrentPage}
 								currentPage={currentPage}

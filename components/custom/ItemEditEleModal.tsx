@@ -55,7 +55,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			category: itemDisToEdit?.category || '',
 			touchpadNumber: itemDisToEdit?.touchpadNumber || '',
 			batteryCellNumber: itemDisToEdit?.batteryCellNumber || '',
-			displaySNumber: itemDisToEdit?.displaySNumber || '',
+			
 			otherCategory: itemDisToEdit?.otherCategory || '',
 			status: true,
 			warranty: itemDisToEdit?.warranty || '',
@@ -129,8 +129,8 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						category: values.category,
 						touchpadNumber: values.touchpadNumber,
 						batteryCellNumber: values.batteryCellNumber,
-						displaySNumber: values.displaySNumber,
 						otherCategory: values.otherCategory,
+						warranty: values.warranty,
 					};
 					await updateItemDis(data).unwrap();
 					await refetch();

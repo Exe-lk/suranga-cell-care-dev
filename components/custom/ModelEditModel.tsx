@@ -40,6 +40,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 			name: modelToEdit?.name || '',
 			category: modelToEdit?.category || '',
 			brand: modelToEdit?.brand || '',
+			description: modelToEdit?.description || '',
 		},
 		enableReinitialize: true,
 		validate: (values) => {
@@ -47,6 +48,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 				name?: string;
 				category?: string;
 				brand?: string;
+				description?: string;
 			} = {};
 			if (!values.name) {
 				errors.name = 'Required';
@@ -67,15 +69,17 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 				category: values.category.trim(),  
 				brand: values.brand.trim(),
 				name: values.name.trim(),
+				description: values.description.trim(),
 			};
 			try {
 				await refetch();
 										
 												const existingModel = ModelData?.find(
-													(brand: { name: string; category: string ,brand:string}) =>
-														brand.name.toLowerCase() === trimmedValues.name.toLowerCase() &&
-														brand.category.toLowerCase() === trimmedValues.category.toLowerCase() &&
-														brand.brand.toLowerCase() === trimmedValues.brand.toLowerCase(),
+													(model: { id: string; name: string; category: string; brand: string }) =>
+														model.id !== id && // Exclude the current model being edited
+														model.name.toLowerCase() === trimmedValues.name.toLowerCase() &&
+														model.category.toLowerCase() === trimmedValues.category.toLowerCase() &&
+														model.brand.toLowerCase() === trimmedValues.brand.toLowerCase(),
 												);
 												
 										
@@ -100,6 +104,7 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 						name: values.name,
 						category: values.category,
 						brand: values.brand,
+						description: values.description,
 						status: true,
 						id: id,
 					};
@@ -212,6 +217,19 @@ const ModelEditModal: FC<ModelEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 								),
 							)}
 						</Select>
+					</FormGroup>
+					<FormGroup id='description' label='Description' className='col-12'>
+						<Input
+							name='description'
+							value={formik.values.description}
+							onChange={formik.handleChange}
+							onBlur={formik.handleBlur}
+							isValid={formik.isValid}
+							isTouched={formik.touched.description}
+							invalidFeedback={formik.errors.description}
+							validFeedback='Looks good!'
+							placeholder='Enter model description...'
+						/>
 					</FormGroup>
 				</div>
 			</ModalBody>

@@ -38,6 +38,7 @@ export const userManagementApiSlice = createApi({
         url: `user_management/${id}`,
         method: 'DELETE',
       }),
+      invalidatesTags: ['User'],
     }),
   }),
 });

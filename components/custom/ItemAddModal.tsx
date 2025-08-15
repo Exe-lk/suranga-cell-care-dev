@@ -14,7 +14,7 @@ import { useGetBrands1Query } from '../../redux/slices/brand1ApiSlice';
 import { useGetModels1Query } from '../../redux/slices/model1ApiSlice';
 import {
 	useAddItemAcceMutation,
-	useGetItemAccesQuery,
+	useGetAllItemAccesForCodeGenQuery,
 } from '../../redux/slices/itemManagementAcceApiSlice';
 
 interface ItemAddModalProps {
@@ -27,8 +27,8 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const [selectedCategory, setSelectedCategory] = useState<string>('');
 	const [selectedBrand, setSelectedBrand] = useState<string>('');
 	const [addItemAcce, { isLoading }] = useAddItemAcceMutation();
-	const { refetch } = useGetItemAccesQuery(undefined);
-	const { data: itemAcces } = useGetItemAccesQuery(undefined);
+	const { refetch } = useGetAllItemAccesForCodeGenQuery(undefined);
+	const { data: itemAcces } = useGetAllItemAccesForCodeGenQuery(undefined);
 	const { data: brands } = useGetBrands1Query(undefined);
 	const { data: models } = useGetModels1Query(undefined);
 	const {
@@ -38,32 +38,39 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	} = useGetCategories1Query(undefined);
 	const [generatedCode, setGeneratedCode] = useState('');
 
+	const generateNextCode = (existingItems: any[]) => {
+		if (!existingItems || existingItems.length === 0) {
+			return '1001';
+		}
+
+		// Extract all numeric codes and find the maximum
+		const existingCodes = existingItems
+			.map((item: any) => {
+				const code = item.code?.toString() || '';
+				// Extract numeric part - handle both pure numbers and codes with prefixes
+				const numericMatch = code.match(/\d+$/);
+				return numericMatch ? parseInt(numericMatch[0], 10) : 0;
+			})
+			.filter((code: number) => code > 0); // Filter out invalid codes
+
+		if (existingCodes.length === 0) {
+			return '1001';
+		}
+
+		const maxCode = Math.max(...existingCodes);
+		const nextCode = maxCode + 1;
+		
+		// Ensure minimum 4 digits
+		return nextCode.toString().padStart(4, '0');
+	};
+
 	useEffect(() => {
-		if (isOpen) {
-			if (itemAcces?.length) {
-				const lastCode = itemAcces
-					.map((item: { code: string }) => item.code || '')
-					.filter((code: string) => code && typeof code === 'string')
-					.reduce((maxCode: string, currentCode: string) => {
-						const currentNumericPart = parseInt(currentCode.replace(/\D/g, ''), 10) || 0;
-						const maxNumericPart = parseInt(maxCode.replace(/\D/g, ''), 10) || 0;
-						return currentNumericPart > maxNumericPart ? currentCode : maxCode;
-					}, '1000');
-				const newCode = incrementCode(lastCode);
-				setGeneratedCode(newCode);
-			} else {
-				setGeneratedCode('1000');
-			}
+		if (isOpen && itemAcces) {
+			const newCode = generateNextCode(itemAcces);
+			setGeneratedCode(newCode);
+			console.log('Generated code:', newCode, 'from items:', itemAcces?.length);
 		}
 	}, [isOpen, itemAcces]);
-
-	
-	const incrementCode = (code: string) => {
-		if (!code) return '1000';
-		const numericPart = parseInt(code.replace(/\D/g, ''), 10) || 0;
-		const incrementedNumericPart = (numericPart + 1).toString().padStart(4, '0');
-		return incrementedNumericPart;
-	};
 
 	const formik = useFormik({
 		initialValues: {
@@ -138,6 +145,13 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			}
 		},
 	});
+
+	// Update formik code value when generatedCode changes
+	useEffect(() => {
+		if (generatedCode) {
+			formik.setFieldValue('code', generatedCode);
+		}
+	}, [generatedCode]);
 
 	const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		setSelectedCategory(e.target.value);

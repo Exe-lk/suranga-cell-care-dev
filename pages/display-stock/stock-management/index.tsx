@@ -31,6 +31,10 @@ import autoTable from 'jspdf-autotable';
 import { useGetStockInOutByDateQuery, useGetStockInOutsQuery, useUpdateStockInOutMutation } from '../../../redux/slices/stockInOutDissApiSlice';
 import bill from '../../../assets/img/bill/WhatsApp_Image_2024-09-12_at_12.26.10_50606195-removebg-preview (1).png';
 import { useGetItemDissQuery } from '../../../redux/slices/itemManagementDisApiSlice';
+import { useGetModelsQuery } from '../../../redux/slices/modelApiSlice';
+import { useGetBrandsQuery } from '../../../redux/slices/brandApiSlice';
+import Select from '../../../components/bootstrap/forms/Select';
+import Option from '../../../components/bootstrap/Option';
 
 const Index: NextPage = () => {
 	const { darkModeStatus } = useDarkMode();
@@ -49,8 +53,16 @@ const Index: NextPage = () => {
 	const [showLowStockAlert, setShowLowStockAlert] = useState(false);
 	const [lowStockItems, setLowStockItems] = useState<any[]>([]);
 
+	// Model dropdown states
+	const [showModelDropdown, setShowModelDropdown] = useState(false);
+	const [selectedBrand, setSelectedBrand] = useState('');
+	const [selectedModel, setSelectedModel] = useState('');
+	const [filteredSearchTerm, setFilteredSearchTerm] = useState('');
+
 	// Get item data to check stock levels
 	const { data: itemData } = useGetItemDissQuery(undefined);
+	const { data: models } = useGetModelsQuery(undefined);
+	const { data: brands } = useGetBrandsQuery(undefined);
 
 	const stock = [
 		{ stock: 'stockOut' },
@@ -86,6 +98,16 @@ const Index: NextPage = () => {
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearchTerm(searchTerm);
+			// Check if search term contains "battery cell" to show model dropdown
+			const isBatteryCellSearch = searchTerm.toLowerCase().includes('battery cell');
+			setShowModelDropdown(isBatteryCellSearch);
+			
+			// If not searching for battery cell, clear model selection
+			if (!isBatteryCellSearch) {
+				setSelectedBrand('');
+				setSelectedModel('');
+				setFilteredSearchTerm(searchTerm);
+			}
 			// This will trigger a new API call with the updated search term
 			// Search is performed directly on the database rather than client-side filtering
 		}, 500);
@@ -110,6 +132,17 @@ const Index: NextPage = () => {
 			setShowLowStockAlert(lowItems.length > 0);
 		}
 	}, [itemData]);
+
+	// Update filtered search term when model is selected
+	useEffect(() => {
+		if (selectedModel && showModelDropdown) {
+			setFilteredSearchTerm(`battery cell ${selectedModel}`);
+			setDebouncedSearchTerm(`battery cell ${selectedModel}`);
+		} else if (showModelDropdown && !selectedModel) {
+			setFilteredSearchTerm('battery cell');
+			setDebouncedSearchTerm('battery cell');
+		}
+	}, [selectedModel, showModelDropdown]);
 
 	const handleExport = async (format: string) => {
 		const table = document.querySelector('table');
@@ -329,14 +362,31 @@ const Index: NextPage = () => {
 
 	// Update the search input handler
 	const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const value = event.target.value;
-		setSearchTerm(value);
+		setSearchTerm(event.target.value);
 	};
 
 	const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value;
-		setStartDate(value);
+		setStartDate(e.target.value);
 	};
+
+	const handleBrandChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setSelectedBrand(e.target.value);
+		setSelectedModel(''); // Reset model when brand changes
+	};
+
+	const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setSelectedModel(e.target.value);
+	};
+
+	// Filter brands that have battery cell category
+	const filteredBrands = brands?.filter((brand: any) => 
+		brand.category === 'Battery Cell'
+	);
+
+	// Filter models based on selected brand and battery cell category
+	const filteredModels = models?.filter((model: any) => 
+		model.brand === selectedBrand && model.category === 'Battery Cell'
+	);
 
 	return (
 		<PageWrapper>
@@ -356,6 +406,43 @@ const Index: NextPage = () => {
 						value={searchTerm}
 						ref={inputRef}
 					/>
+					
+					{/* Model dropdown for battery cell search */}
+					{showModelDropdown && (
+						<div className='d-flex align-items-center ms-3'>
+							<FormGroup id='brandSelect' label='' className='me-2' style={{ minWidth: '150px' }}>
+								<Select
+									ariaLabel='Select brand'
+									onChange={handleBrandChange}
+									value={selectedBrand}
+									size='sm'>
+									<Option value=''>Select Brand</Option>
+									{filteredBrands?.map((brand: any) => (
+										<Option key={brand.id} value={brand.name}>
+											{brand.name}
+										</Option>
+									))}
+								</Select>
+							</FormGroup>
+							
+							{selectedBrand && (
+								<FormGroup id='modelSelect' label='' className='me-2' style={{ minWidth: '150px' }}>
+									<Select
+										ariaLabel='Select model'
+										onChange={handleModelChange}
+										value={selectedModel}
+										size='sm'>
+										<Option value=''>Select Model</Option>
+										{filteredModels?.map((model: any) => (
+											<Option key={model.id} value={model.name}>
+												{model.name}
+											</Option>
+										))}
+									</Select>
+								</FormGroup>
+							)}
+						</div>
+					)}
 				</SubHeaderLeft>
 				<SubHeaderRight>
 					{showLowStockAlert && (
@@ -595,6 +682,7 @@ const Index: NextPage = () => {
 										<tr>
 											<th>Date</th>
 											<th>Code</th>
+											<th>Barcode</th>
 											<th>Category</th>
 											<th>Brand</th>
 											<th>Model</th>
@@ -631,6 +719,7 @@ const Index: NextPage = () => {
 													<tr key={index}>
 														<td>{brand.date}</td>
 														<td>{brand.code}</td>
+														<td>{brand.barcode}</td>
 														<td>{brand.category}</td>
 														<td>{brand.brand}</td>
 														<td>{brand.model}</td>

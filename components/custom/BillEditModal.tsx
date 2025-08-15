@@ -55,10 +55,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			CustomerName: billToEdit?.CustomerName || '',
 			CustomerMobileNum: billToEdit?.CustomerMobileNum || '',
 			NIC: billToEdit?.NIC || '',
-			componentCost: billToEdit?.componentCost || '',
-			repairCost: billToEdit?.repairCost || '',
-			cost: billToEdit?.cost || '',
-			Price: billToEdit?.Price || '',
 			Status: billToEdit?.Status || '',
 			DateOut: billToEdit?.DateOut || '',
 		},
@@ -74,10 +70,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 				CustomerName?: string;
 				CustomerMobileNum?: string;
 				NIC?: string;
-				componentCost?: string;
-				repairCost?: string;
-				cost?: string;
-				Price?: string;
 				Status?: string;
 				DateOut?: string;
 			} = {};
@@ -96,14 +88,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			} else if (!/^\d{9}[Vv]$/.test(values.NIC) && !/^\d{12}$/.test(values.NIC)) {
 				errors.NIC = 'NIC must be 9 digits followed by "V" or 12 digits';
 			}
-			// if (!values.componentCost) errors.componentCost = 'Component Cost is required.';
-			// else if (parseFloat(values.componentCost) <= 0)
-			// 	errors.componentCost = 'Component Cost must be greater than 0';
-			// if (!values.repairCost) errors.repairCost = 'Repair Cost is required.';
-			// else if (parseFloat(values.repairCost) <= 0)
-			// 	errors.repairCost = 'Repair Cost must be greater than 0';
-			// if (!values.Price) errors.Price = 'Price is required.';
-			// else if (parseFloat(values.Price) <= 0) errors.Price = 'Price must be greater than 0';
 			if (!values.Status) errors.Status = 'Status is required.';
 			if (!values.dateIn) errors.dateIn = 'Date In is required.';
 			if (values.Status === 'Reject' || values.Status === 'Repair Completed') {
@@ -134,10 +118,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						CustomerName: values.CustomerName,
 						CustomerMobileNum: values.CustomerMobileNum,
 						NIC: values.NIC,
-						componentCost: values.componentCost,
-						repairCost: values.repairCost,
-						cost: values.cost,
-						Price: values.Price,
 						Status: values.Status,
 						DateOut: values.DateOut,
 						status: true,
@@ -170,12 +150,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 		if (!sanitized.startsWith('0')) sanitized = '0' + sanitized;
 		return sanitized.slice(0, 10);
 	};
-
-	useEffect(() => {
-		const componentCost = parseFloat(formik.values.componentCost) || 0;
-		const repairCost = parseFloat(formik.values.repairCost) || 0;
-		formik.setFieldValue('cost', (componentCost + repairCost).toFixed(2));
-	}, [formik.values.componentCost, formik.values.repairCost]);
 
 	return (
 		<Modal isOpen={isOpen} aria-hidden={!isOpen} setIsOpen={setIsOpen} size='xl' titleId={id}>
@@ -357,7 +331,7 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 							
 						</>
 					</FormGroup>
-					{/* <FormGroup id='technicianNum' label='Technician No' className='col-md-6'>
+					<FormGroup id='technicianNum' label='Technician No' className='col-md-6'>
 						<Select
 							ariaLabel='Select Technician'
 							placeholder='Select a Technician'
@@ -378,7 +352,7 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						</Select>
 						{techniciansLoading ? <p>Loading technicians...</p> : <></>}
 						{isError ? <p>Error loading technicians. Please try again.</p> : <></>}
-					</FormGroup> */}
+					</FormGroup>
 					<FormGroup id='CustomerName' label='Customer Name' className='col-md-6'>
 						<Input
 							onChange={formik.handleChange}
@@ -459,37 +433,6 @@ const UserAddModal: FC<UserAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 							readOnly
 						/>
 					</FormGroup>*/}
-					<FormGroup id='Price' label='Price (lkr)' className='col-md-6'>
-						<Input
-							type='number'
-							onChange={formik.handleChange}
-							value={formik.values.Price}
-							onBlur={formik.handleBlur}
-							isValid={formik.isValid}
-							isTouched={formik.touched.Price}
-							invalidFeedback={formik.errors.Price}
-							validFeedback='Looks good!'
-						/>
-					</FormGroup> 
-					{/* <FormGroup id='Status' label='Status' className='col-md-6'>
-						<Select
-							ariaLabel='Default select Status'
-							placeholder='Open this select Status'
-							onChange={formik.handleChange}
-							value={formik.values.Status}
-							name='Status'
-							isValid={formik.isValid}
-							isTouched={formik.touched.Status}
-							invalidFeedback={formik.errors.Status}
-							validFeedback='Looks good!'>
-							<Option value=''>Select the Status</Option>
-							<Option value='Waiting'>Waiting</Option>
-							<Option value='Ready to Repair'>Ready to Repair</Option>
-							<Option value='In Progress'>In Progress</Option>
-							<Option value='Reject'>Reject</Option>
-							<Option value='Repair Completed'>Repair Completed</Option>
-						</Select>
-					</FormGroup> */}
 					{formik.values.Status === 'Reject' ||
 					formik.values.Status === 'Repair Completed' ? (
 						<FormGroup id='DateOut' label='Date Out' className='col-md-6'>

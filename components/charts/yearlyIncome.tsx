@@ -8,8 +8,7 @@ import Card, {
 	CardTitle,
 } from '../../components/bootstrap/Card';
 import Chart, { IChartOptions } from '../../components/extras/Chart';
-import { collection, getDocs } from 'firebase/firestore';
-import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 const YearlyFinancialChart = () => {
     const [yearlyData, setYearlyData] = useState<
@@ -19,12 +18,14 @@ const YearlyFinancialChart = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const dataCollection = collection(firestore, 'accessorybill');
-                const querySnapshot = await getDocs(dataCollection);
-                const firebaseData = querySnapshot.docs.map((doc) => ({
-                    ...doc.data(),
-                    cid: doc.id,
-                }));
+                const { data: firebaseData, error } = await supabase
+                    .from('accessorybill')
+                    .select('*');
+
+                if (error) {
+                    console.error('Error fetching yearly data:', error);
+                    return;
+                }
 
                 const yearlyTotals: Record<number, any> = {};
 

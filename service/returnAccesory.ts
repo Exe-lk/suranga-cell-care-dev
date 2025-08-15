@@ -77,32 +77,33 @@ export const saveReturnData = async (data: any) => {
     if (insertError) throw insertError;
 
     console.log(`Document created with ID: ${nextId}`);
+    return true;
   } catch (error) {
     console.error('Error saving return data:', error);
+    return false;
   }
 };
 
-// Save to "returnDisplay" table with custom numeric ID
+// Save to "returnDisplay" table - improved version
 export const saveReturnData1 = async (data: any) => {
   try {
-    const { data: existingData, error: fetchError } = await supabase
+    console.log('Attempting to save return data:', data);
+    
+    // Since we're using SERIAL for id, we don't need to manually set it
+    // Remove id from data if it exists
+    const { id, ...dataWithoutId } = data;
+    
+    const { data: insertedData, error: insertError } = await supabase
       .from('returnDisplay')
-      .select('id');
+      .insert([dataWithoutId])
+      .select(); // Return the inserted data
 
-    if (fetchError) throw fetchError;
+    if (insertError) {
+      console.error('Supabase insert error:', insertError);
+      throw insertError;
+    }
 
-    const docIds = existingData
-      ?.map((row: any) => Number(row.id))
-      .filter((id: number) => !isNaN(id)) || [];
-
-    const nextId = docIds.length > 0 ? Math.max(...docIds) + 1 : 1;
-
-    const { error: insertError } = await supabase
-      .from('returnDisplay')
-      .insert([{ id: nextId, ...data }]);
-
-    if (insertError) throw insertError;
-
+    console.log('Successfully saved return data:', insertedData);
     return true;
   } catch (error) {
     console.error('Error saving return data:', error);
@@ -113,27 +114,45 @@ export const saveReturnData1 = async (data: any) => {
 // Update quantity in "ItemManagementAcce"
 export const updateQuantity = async (id: string, quantity: number) => {
   try {
+    console.log(`Updating ItemManagementAcce quantity - ID: ${id}, Quantity: ${quantity}`);
+    
     const { error } = await supabase
       .from('ItemManagementAcce')
       .update({ quantity })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating quantity in ItemManagementAcce:', error);
+      throw error;
+    }
+    
+    console.log('Successfully updated quantity in ItemManagementAcce');
+    return true;
   } catch (error) {
     console.error('Error updating quantity in ItemManagementAcce:', error);
+    return false;
   }
 };
 
 // Update quantity in "ItemManagementDis"
 export const updateQuantity1 = async (id: string, quantity: number) => {
   try {
+    console.log(`Updating ItemManagementDis quantity - ID: ${id}, Quantity: ${quantity}`);
+    
     const { error } = await supabase
       .from('ItemManagementDis')
       .update({ quantity })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating quantity in ItemManagementDis:', error);
+      throw error;
+    }
+    
+    console.log('Successfully updated quantity in ItemManagementDis');
+    return true;
   } catch (error) {
     console.error('Error updating quantity in ItemManagementDis:', error);
+    return false;
   }
 };

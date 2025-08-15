@@ -32,20 +32,27 @@ function Index() {
 	const [dropdownOptions, setDropdownOptions] = useState([]);
 	const [orders, setOrders] = useState([]);
 	const [selectedorder, setSelectedOrder] = useState<any[]>([]);
+	const [billSearchTerm, setBillSearchTerm] = useState('');
+	const [showBillDropdown, setShowBillDropdown] = useState(false);
+	const [filteredBills, setFilteredBills] = useState<any[]>([]);
 
 	const [returnType, setReturnType] = useState('');
 	const [condition, setCondition] = useState('');
 	const [id, setId] = useState('');
 	useEffect(() => {
-		if (barcode.length >= 4 && itemAcces) {
+		if (barcode.length >= 4 && itemAcces && Array.isArray(itemAcces)) {
 			const prefix = barcode.slice(0, 4);
-			const matchedItem = itemAcces.find((item: { code: string; quantity: string }) =>
-				item.code.startsWith(prefix),
-			);
+			const matchedItem = itemAcces.find((item: any) => {
+				// Add proper type checking for item.code
+				if (item && item.code) {
+					const code = String(item.code); // Convert to string to ensure startsWith works
+					return code.startsWith(prefix);
+				}
+				return false;
+			});
 
 			if (matchedItem) {
 				setId(matchedItem.id);
-			} else {
 			}
 		}
 	}, [barcode, itemAcces]);
@@ -58,6 +65,7 @@ function Index() {
 				if (error) throw error;
 
 				setOrders(data);
+				setFilteredBills(data); // Initialize filtered bills
 				// console.log(data);
 			} catch (error) {
 				console.error('Error fetching data:', error);
@@ -66,6 +74,24 @@ function Index() {
 
 		fetchData();
 	}, []);
+
+	// Filter bills based on search term
+	useEffect(() => {
+		if (billSearchTerm.trim() === '') {
+			setFilteredBills(orders);
+		} else {
+			const filtered = orders.filter((order: any) => {
+				const billNumber = order.id?.toString() || '';
+				const customerName = order.name?.toLowerCase() || '';
+				const searchLower = billSearchTerm.toLowerCase();
+				
+				return billNumber.includes(billSearchTerm) || 
+				       customerName.includes(searchLower);
+			});
+			setFilteredBills(filtered);
+		}
+	}, [billSearchTerm, orders]);
+
 	const currentDate = new Date().toLocaleDateString();
 	const formik = useFormik({
 		initialValues: {
@@ -146,6 +172,7 @@ function Index() {
 			return errors;
 		},
 		onSubmit: async (values: any) => {
+			try {
 			const process = Swal.fire({
 				title: 'Processing...',
 				html: 'Please wait while the data is being processed.<br><div class="spinner-border" role="status"></div>',
@@ -154,19 +181,26 @@ function Index() {
 				showConfirmButton: false,
 			});
 			const barcode = values.barcode;
-			console.log(barcode);
-			console.log(itemAcces);
-			if (barcode.length >= 4 && itemAcces) {
+				console.log('Barcode:', barcode);
+				console.log('ItemAcces:', itemAcces);
+				
+				if (barcode && barcode.length >= 4 && itemAcces && Array.isArray(itemAcces)) {
 				const prefix = barcode.slice(0, 4);
 
-				const matchedItem = itemAcces.find((item: { code: string; quantity: string }) =>
-					item.code.startsWith(prefix),
-				);
-				console.log(matchedItem);
+					const matchedItem = itemAcces.find((item: any) => {
+						// Add proper type checking for item.code
+						if (item && item.code) {
+							const code = String(item.code); // Convert to string to ensure startsWith works
+							return code.startsWith(prefix);
+						}
+						return false;
+					});
+					
+					console.log('Matched Item:', matchedItem);
 				if (matchedItem) {
 					if (values.condition === 'Good') {
-						console.log(Number(matchedItem.quantity));
-						console.log(values.quantity);
+							console.log('Current quantity:', Number(matchedItem.quantity));
+							console.log('Return quantity:', values.qyantity);
 						await updateQuantity(
 							matchedItem.id,
 							Number(matchedItem.quantity) + Number(values.qyantity),
@@ -174,23 +208,43 @@ function Index() {
 					}
 				}
 			}
+				
 			refetch();
 			await saveReturnData(values);
 			Swal.fire('Success', 'Return data saved successfully!', 'success');
 			formik.resetForm();
 			setReturnType('');
 			setCondition('');
+				setBillSearchTerm('');
+				setSelectedOrder([]);
+				setShowBillDropdown(false);
+			} catch (error) {
+				console.error('Error in onSubmit:', error);
+				Swal.fire('Error', 'An error occurred while processing the return. Please try again.', 'error');
+			}
 		},
 	});
-	const handlebillClick = async (value: any) => {
+	const handlebillClick = async (billId: any, billData?: any) => {
 		console.log(orders);
-		const selectedOrder: any = orders.find((order: any) => order.id == value);
+		let selectedOrder: any;
+		
+		if (billData) {
+			// Called from dropdown selection
+			selectedOrder = billData;
+		} else {
+			// Called from manual input
+			selectedOrder = orders.find((order: any) => order.id == billId);
+		}
+		
 		if (selectedOrder) {
 			console.log('Found Order:', selectedOrder.date);
 			await setSelectedOrder(selectedOrder.orders);
+			formik.setFieldValue('Bill_number', selectedOrder.id);
 			formik.setFieldValue('date_sold', selectedOrder.date);
 			formik.setFieldValue('name', selectedOrder.name);
 			formik.setFieldValue('contact', selectedOrder.contact);
+			setBillSearchTerm(selectedOrder.id.toString());
+			setShowBillDropdown(false);
 		} else {
 			console.log('Order not found!');
 		}
@@ -236,19 +290,76 @@ function Index() {
 							<FormGroup
 								id='Bill_number'
 								label='Bill Number'
-								onChange={formik.handleChange}
 								className='col-md-12'>
+								<div style={{ position: 'relative' }}>
 								<Input
+										placeholder='Search bill number or customer name...'
+										value={billSearchTerm}
 									onChange={(e: any) => {
-										handlebillClick(e.target.value);
-									}}
-									value={formik.values.Bill_number}
-									onBlur={formik.handleBlur}
+											setBillSearchTerm(e.target.value);
+											setShowBillDropdown(true);
+											formik.setFieldValue('Bill_number', e.target.value);
+										}}
+										onFocus={() => setShowBillDropdown(true)}
+										onBlur={(e: any) => {
+											// Delay hiding dropdown to allow for clicks
+											setTimeout(() => setShowBillDropdown(false), 200);
+										}}
 									isValid={formik.isValid}
 									isTouched={formik.touched.Bill_number}
 									invalidFeedback={formik.errors.Bill_number}
 									validFeedback='Looks good!'
 								/>
+									{showBillDropdown && (
+										<div 
+											style={{
+												position: 'absolute',
+												top: '100%',
+												left: 0,
+												right: 0,
+												backgroundColor: 'white',
+												border: '1px solid #ced4da',
+												borderRadius: '0.375rem',
+												maxHeight: '200px',
+												overflowY: 'auto',
+												zIndex: 1000,
+												boxShadow: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)'
+											}}
+										>
+											{filteredBills.length > 0 ? (
+												filteredBills.slice(0, 10).map((bill: any) => (
+													<div
+														key={bill.id}
+														style={{
+															padding: '8px 12px',
+															cursor: 'pointer',
+															borderBottom: '1px solid #f1f3f4',
+															transition: 'background-color 0.15s ease-in-out'
+														}}
+														onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+														onClick={() => handlebillClick(bill.id, bill)}
+														onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f8f9fa'}
+														onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'white'}
+													>
+														<div style={{ fontWeight: 'bold', fontSize: '14px', color: '#495057' }}>
+															Bill #{bill.id}
+														</div>
+														<div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
+															Customer: {bill.name || 'N/A'} - {bill.contact || 'N/A'}
+														</div>
+														<div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
+															Date: {bill.date || 'N/A'} - Amount: ${bill.amount || 0}
+														</div>
+													</div>
+												))
+											) : (
+												<div style={{ padding: '12px', textAlign: 'center', color: '#6c757d', fontSize: '14px' }}>
+													No bills found
+												</div>
+											)}
+										</div>
+									)}
+								</div>
 							</FormGroup>
 							<FormGroup id='item1' label='Item' className='col-md-12'>
 								<Select
@@ -331,9 +442,9 @@ function Index() {
 									invalidFeedback={formik.errors.returnType}
 									onBlur={formik.handleBlur}>
 									<Checks
-										// id='Same Item'
+										id='sameItem'
 										label='Same Item'
-										name='Same Item'
+										name='returnType'
 										value='Same Item'
 										onChange={(e: any) => {
 											setReturnType(e.target.value),
@@ -342,9 +453,9 @@ function Index() {
 										checked={returnType == 'Same Item'}
 									/>
 									<Checks
-										id='New Item'
+										id='newItem'
 										label='New Item'
-										name='New Item'
+										name='returnType'
 										value='New Item'
 										onChange={(e: any) => {
 											setReturnType(e.target.value),
@@ -353,9 +464,9 @@ function Index() {
 										checked={returnType == 'New Item'}
 									/>
 									<Checks
-										id='Exchange'
+										id='exchange'
 										label='Exchange'
-										name='Exchange'
+										name='returnType'
 										value='Exchange'
 										onChange={(e: any) => {
 											setReturnType(e.target.value),
@@ -364,9 +475,9 @@ function Index() {
 										checked={returnType == 'Exchange'}
 									/>
 									<Checks
-										id='Cash'
+										id='cash'
 										label='Cash'
-										name='Cash'
+										name='returnType'
 										value='Cash'
 										onChange={(e: any) => {
 											setReturnType(e.target.value),
@@ -383,9 +494,9 @@ function Index() {
 									isTouched={formik.touched.condition}
 									invalidFeedback={formik.errors.condition}>
 									<Checks
-										id='Good'
+										id='good'
 										label='Good'
-										name='Good'
+										name='condition'
 										value='Good'
 										onChange={(e: any) => {
 											setCondition(e.target.value);
@@ -394,9 +505,9 @@ function Index() {
 										checked={condition == 'Good'}
 									/>
 									<Checks
-										id='Bad'
+										id='bad'
 										label='Bad'
-										name='Bad'
+										name='condition'
 										value='Bad'
 										onChange={(e: any) => {
 											setCondition(e.target.value),

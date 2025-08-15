@@ -59,6 +59,10 @@ export const stockInOutApiSlice = createApi({
 			query: () => 'stockInOut/route1',
 			providesTags: ['StockInOut'],
 		}),
+		getStockOutByTechnician: builder.query({
+			query: (technicianId) => `stockInOut/technician/${technicianId}`,
+			providesTags: ['StockInOut'],
+		}),
 		updateSubStockInOut: builder.mutation({
 			query: (updatedStockInOut) => ({
 				url: `stockInOut/route1`,
@@ -80,5 +84,6 @@ export const {
 	useUpdateStockInOutMutation,
 	useDeleteStockInOutMutation,
 	useGetSubStockInOutsQuery,
+	useGetStockOutByTechnicianQuery,
 	useUpdateSubStockInOutMutation,
 } = stockInOutApiSlice;

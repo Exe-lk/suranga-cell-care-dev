@@ -57,17 +57,27 @@ export const createItemAcce = async (values: any) => {
 };
 export const getItemAcces = async () => {
 
-  const { data, error } = await supabase
-    .from('ItemManagementAcce')
-    .select('*')
-    .eq('status', true);
+  // const { data, error } = await supabase
+  //   .from('ItemManagementAcce')
+  //   .select('*')
+  //   .eq('status', true);
 
-  if (error) {
-    console.error('Error fetching items:', error);
+    const { data: firstBatch, error: err1 } = await supabase
+    .from('ItemManagementAcce')
+    .select('*') // First 1000 rows
+    .eq('status', true);
+ // Next 800 rows
+  
+
+
+
+
+  if (err1 ) {
+    console.error('Error fetching items:', err1);
     return [];
   }
 
-  return data;
+  return firstBatch;
 };
 
 export const getDeleteItemAcces = async () => {

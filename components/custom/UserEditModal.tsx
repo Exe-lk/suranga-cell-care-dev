@@ -31,7 +31,6 @@ const UserEditModal: FC<UserEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 			mobile: userToEdit?.mobile || '',
 			email: userToEdit?.email || '',
 			nic: userToEdit?.nic || '',
-			level:userToEdit?.level|| 'level 1',
 		},
 		enableReinitialize: true,
 		validate: (values) => {
@@ -41,16 +40,12 @@ const UserEditModal: FC<UserEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 				mobile?: string;
 				email?: string;
 				nic?: string;
-				level?:string
 			} = {};
 			if (!values.role) {
 				errors.role = 'Required';
 			}
 			if (!values.name) {
 				errors.name = 'Required';
-			}
-			if (!values.level) {
-				errors.level = 'Required';
 			}
 			if (!values.mobile) {
 				errors.mobile = 'Required';
@@ -82,18 +77,17 @@ const UserEditModal: FC<UserEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
+				const data = {
+					id: id,
+					name: values.name,
+					role: values.role,
+					nic: values.nic,
+					email: values.email,
+					mobile: values.mobile,
+					status: true,
+				};
 				try {
-					const data = {
-						name: values.name,
-						role: values.role,
-						mobile: values.mobile,
-						email: values.email,
-						nic: values.nic,
-						status: true,
-						id: id,
-						level:values.level
-					};
-					await updateUser(data).unwrap();
+					const response: any = await updateUser(data).unwrap();
 					refetch();
 					await Swal.fire({
 						icon: 'success',
@@ -102,15 +96,16 @@ const UserEditModal: FC<UserEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 					formik.resetForm();
 					setIsOpen(false);
 				} catch (error) {
+					console.error('Error during handleSubmit: ', error);
 					await Swal.fire({
 						icon: 'error',
 						title: 'Error',
-						text: 'Failed to update the user. Please try again.',
+						text: 'Failed to update user. Please try again later.',
 					});
 				}
 			} catch (error) {
-				console.error('Error during handleUpload: ', error);
-				alert('An error occurred during file upload. Please try again later.');
+				console.error('Error during form submission: ', error);
+				alert('An error occurred during form submission. Please try again later.');
 			}
 		},
 	});
@@ -169,23 +164,6 @@ const UserEditModal: FC<UserEditModalProps> = ({ id, isOpen, setIsOpen }) => {
 							<Option value={'Accessory sales assitant'}>Accessory sales assitant</Option>
 						</Select>
 					</FormGroup>
-					{formik.values.role=="cashier" &&(
-						<FormGroup id='level' label='Level' className='col-md-6'>
-						<Select
-							ariaLabel='Default select example'
-							onChange={formik.handleChange}
-							value={formik.values.level}
-							onBlur={formik.handleBlur}
-							isValid={formik.isValid}
-							isTouched={formik.touched.level}
-							invalidFeedback={formik.errors.level}>
-							<Option>Select the role</Option>
-							<Option value={'level 1'}>Level 1</Option>
-							<Option value={'level 2'}>Level 2</Option>
-							
-						</Select>
-					</FormGroup>
-					)}
 					<FormGroup id='mobile' label='Mobile number' className='col-md-6'>
 						<Input
 							type='text'

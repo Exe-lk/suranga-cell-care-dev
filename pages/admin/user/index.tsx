@@ -76,7 +76,7 @@ const Index: NextPage = () => {
 		if (inputRef.current) {
 			inputRef.current.focus();
 		}
-	}, [users]);
+	}, [users, error]);
 
 	const handleClickDelete = async (user: any) => {
 		if (user.role === 'admin') {
@@ -103,7 +103,6 @@ const Index: NextPage = () => {
 						email: user.email,
 						mobile: user.mobile,
 						status: false,
-						level:user.level
 					}).unwrap();
 					Swal.fire('Deleted!', 'User has been deleted.', 'success');
 					refetch();
