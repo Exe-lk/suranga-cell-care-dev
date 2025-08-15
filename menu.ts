@@ -80,13 +80,7 @@ export const stockAccPagesMenu = {
 		icon: 'AutoStories',
 		subMenu: null,
 	},
-	stockUpdate: {
-		id: 'dashboard',
-		text: 'Stock Update',
-		path: 'accessory-stock/update-stock',
-		icon: 'AutoStories',
-		subMenu: null,
-	},
+
 	singlePages: {
 		id: 'stock keeper bar1',
 		text: 'Barcode Printing',
@@ -596,6 +590,13 @@ export const addminPagesMenu = {
 		path: 'admin/dealer-management',
 		icon: 'PersonalInjury',
 
+	},
+	stockUpdate: {
+		id: 'dashboard',
+		text: 'Stock Update',
+		path: 'admin/stock-update',
+		icon: 'AutoStories',
+		subMenu: null,
 	},
 	
 	singlePages: {
