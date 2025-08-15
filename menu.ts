@@ -594,7 +594,7 @@ export const addminPagesMenu = {
 	stockUpdate: {
 		id: 'dashboard',
 		text: 'Stock Update',
-		path: 'admin/stock-update',
+		path: 'admin/update-stock',
 		icon: 'AutoStories',
 		subMenu: null,
 	},
