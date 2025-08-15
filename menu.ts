@@ -73,6 +73,20 @@ export const stockAccPagesMenu = {
 		icon: 'AutoStories',
 		subMenu: null,
 	},
+	return: {
+		id: 'dashboard',
+		text: 'Return',
+		path: 'accessory-stock/return',
+		icon: 'AutoStories',
+		subMenu: null,
+	},
+	stockUpdate: {
+		id: 'dashboard',
+		text: 'Stock Update',
+		path: 'accessory-stock/update-stock',
+		icon: 'AutoStories',
+		subMenu: null,
+	},
 	singlePages: {
 		id: 'stock keeper bar1',
 		text: 'Barcode Printing',
