@@ -83,9 +83,8 @@ const Index: NextPage = () => {
 				errors.itemCode = 'Item Code is required';
 			}
 			
-			if (!values.newStock) {
-				errors.newStock = 'New stock quantity is required';
-			} else if (parseInt(values.newStock) < 0) {
+			
+			 if (parseInt(values.newStock) < -1) {
 				errors.newStock = 'Stock quantity cannot be negative';
 			} else if (!/^\d+$/.test(values.newStock)) {
 				errors.newStock = 'Stock quantity must be a valid number';
@@ -114,7 +113,7 @@ const Index: NextPage = () => {
 					showCancelButton: false,
 					showConfirmButton: false,
 				});
-
+				console.log(values.newStock)
 				// Call the API to update stock
 				const response = await fetch('/api/stockInOutAcce/route', {
 					method: 'PUT',

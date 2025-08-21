@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       case 'PUT': {
         const { id, quantity, type } = req.body;
-        if (!id || !quantity) {
+        if (!id){
           res.status(400).json({ error: 'ID and quantity are required' });
           return;
         }
