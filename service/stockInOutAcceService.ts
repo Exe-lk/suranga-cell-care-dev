@@ -109,8 +109,13 @@ export const getstockIns = async () => {
 		.select('*')
 		.range(4000, 4999)
 		.eq('status', true);
+	const { data: sixthBatch, error: err6 } = await supabase
+		.from('StockAcce')
+		.select('*')
+		.range(5000, 5999)
+		.eq('status', true);
  // Combine both batches
- const allData = [...(firstBatch || []), ...(secondBatch || []),...(theredBatch || []),...(forthBatch || []),...(fithBatch|| [])];
+ const allData = [...(firstBatch || []), ...(secondBatch || []),...(theredBatch || []),...(forthBatch || []),...(fithBatch|| []),...(sixthBatch|| [])		];
 
 	if (error) {
 		console.error('Error fetching stock ins:', error);
