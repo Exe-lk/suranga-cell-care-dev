@@ -701,7 +701,7 @@ const Index: NextPage = () => {
 														}
 														return true;
 													})
-													.sort((a, b) => b.code - a.code)
+													.sort((a, b) => a.quantity - b.quantity)
 													.map((item: any, index: any) => (
 														<React.Fragment key={index}>
 															<tr key={index} style={getRowStyle(item)}>

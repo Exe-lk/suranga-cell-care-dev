@@ -615,6 +615,7 @@ const Index: NextPage = () => {
 														? selectedModels.includes(itemAcces.model)
 														: true,
 												)
+												.sort((a:any, b:any) => a.quantity - b.quantity)
 												.map((itemAcces: any, index: any) => (
 													<tr key={index} style={getRowStyle(itemAcces)}>
 														<td>{itemAcces.code}</td>

@@ -124,7 +124,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						model: values.model,
 						brand: values.brand,
 						reorderLevel: values.reorderLevel,
-						quantity: values.quantity,
+						// quantity: values.quantity,
 						boxNumber: values.boxNumber,
 						category: values.category,
 						touchpadNumber: values.touchpadNumber,
