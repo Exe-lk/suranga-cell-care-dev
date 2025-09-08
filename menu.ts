@@ -203,8 +203,15 @@ export const AccessoryBillKeeper = {
 	},
 	item1: {
 		id: 'dashboard2',
-		text: 'Product View',
+		text: 'Product View ',
 		path: 'accessory-sales-assitant/item-management',
+		icon: 'DevicesOther',
+		subMenu: null,
+	},
+	item2: {
+		id: 'dashboard2',
+		text: 'Product View Accessories',
+		path: 'accessory-sales-assitant/item-management-acc',
 		icon: 'DevicesOther',
 		subMenu: null,
 	},
