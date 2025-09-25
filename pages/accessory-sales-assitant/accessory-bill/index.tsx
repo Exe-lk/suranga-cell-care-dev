@@ -18,7 +18,8 @@ import MyDefaultHeader from '../../_layout/_headers/AccessoryBillHeader';
 import { Creatbill, Getbills } from '../../../service/accessoryService';
 import Page from '../../../layout/Page/Page';
 import Spinner from '../../../components/bootstrap/Spinner';
-import { useGetItemAccesQuery } from '../../../redux/slices/itemManagementAcceApiSlice';
+// Removed useGetItemAccesQuery import since we now use direct database lookup
+// Keeping useGetItemAcceByCodeQuery for potential future use with React Query
 import { number } from 'prop-types';
 import { supabase } from '../../../lib/supabase';
 
@@ -26,10 +27,12 @@ function index() {
 	const [orderedItems, setOrderedItems] = useState<any[]>([]);
 	const { data: Accstock, error, isLoading } = useGetStockInOutsdisQuery(undefined);
 	const [updateStockInOut] = useUpdateStockInOutMutation();
-	const { data: itemAcces } = useGetItemAccesQuery(undefined);
-	const [items, setItems] = useState<any[]>([]);
+	// Removed useGetItemAccesQuery since we now use direct database lookup by code
+	// Removed items state - using lazy loading instead
 	const [selectedBarcode, setSelectedBarcode] = useState<any[]>([]);
 	const [selectedProduct, setSelectedProduct] = useState<string>('');
+	const [barcodeInput, setBarcodeInput] = useState<string>('');
+	const [currentBarcodeData, setCurrentBarcodeData] = useState<any>(null);
 	const [quantity, setQuantity] = useState<any>(1);
 	const [payment, setPayment] = useState(true);
 	const [amount, setAmount] = useState<number>(0);
@@ -50,7 +53,7 @@ function index() {
 	const [returndata, setReturndata] = useState<any>('');
 	const [returnid, setReturnid] = useState<any>('');
 	const [name, setName] = useState<string>('');
-	const dropdownRef = useRef<Dropdown>(null);
+	const dropdownRef = useRef<HTMLInputElement>(null);
 	const quantityRef = useRef<HTMLInputElement>(null);
 	const discountRef = useRef<HTMLInputElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -158,6 +161,19 @@ function index() {
 			setContact(0);
 			setName('');
 			setStaus(false);
+			return;
+		}
+
+		// Validate contact number format - must start with allowed prefixes
+		const allowedPrefixes = ['70', '71', '72', '74', '75', '76', '77', '78', '79'];
+		const valueStr = String(value);
+		
+		// Check if the contact number starts with any of the allowed prefixes
+		const isValidPrefix = allowedPrefixes.some(prefix => valueStr.startsWith(prefix));
+		
+		if (valueStr.length >= 3 && !isValidPrefix) {
+			// If 3 or more digits entered and doesn't start with valid prefix, show error
+			Swal.fire('Invalid Contact Number', 'Contact number must start with: 070, 071, 072, 074, 075, 076, 077, 078, or 079', 'error');
 			return;
 		}
 
@@ -411,37 +427,29 @@ function index() {
 			Swal.fire('Error', 'Invalid draft data.', 'error');
 		}
 	};
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const updatedAccstock = Accstock.map((item: any) => ({
-					...item,
-					currentQuantity: item.quantity,
-					discount: 0,
-					// Add currentQuantity field
-					// Optionally remove the old quantity field if not needed
-				}));
+	// Note: Removed initial fetch all items logic since we now use lazy loading
+	// The Accstock data is still fetched for barcode lookup, but we don't process all items upfront
 
-				const result1 = updatedAccstock.filter((item: any) => item.stock === 'stockIn');
-				const combinedResult = [...result1];
-				setItems(combinedResult);
-				console.log('Accessory stock items:', combinedResult);
-				// Log itemAcces data to debug quantity issues
-				console.log('ItemAcces data:', itemAcces);
-			} catch (error) {
-				console.error('Error fetching data: ', error);
+	const fetchItemByCode = async (code: string) => {
+		try {
+			const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}itemManagementAcce/${code}`);
+			if (!response.ok) {
+				return null;
 			}
-		};
-
-		fetchData();
-	}, [isLoading, itemAcces]);
+			const data = await response.json();
+			return data;
+		} catch (error) {
+			console.error('Error fetching item by code:', error);
+			return null;
+		}
+	};
 
 	const handlePopupOk = async () => {
-		if (!selectedProduct || quantity <= 0 || quantity > 25) {
+		if (!currentBarcodeData || quantity <= 0 || quantity > 25) {
 			Swal.fire('Error', 'Please select a product and enter a valid quantity.', 'error');
 			return;
 		}
-		const selectedItem = items.find((item) => item.barcode === selectedProduct);
+		const selectedItem = currentBarcodeData;
 		if (selectedItem) {
 			console.log('Selected item:', selectedItem);
 
@@ -466,73 +474,20 @@ function index() {
 				}
 				setOrderedItems(updatedItems);
 			} else {
-				// Get the barcode prefix to find matching inventory item
+				// Get the barcode prefix to find matching inventory item directly from database
 				const barcodePrefix = selectedProduct.substring(0, 4);
 				console.log('Looking for item with code:', barcodePrefix);
-				console.log('All available item codes:', itemAcces?.map((item: any) => item.code));
 
-				// More flexible matching - try different approaches
-				let matchingItem = itemAcces?.find(
-					(accessItem: any) => accessItem.code === barcodePrefix,
-				);
+				// Fetch item directly from database by code
+				const matchingItem = await fetchItemByCode(barcodePrefix);
+				console.log('Found matching item from database:', matchingItem);
 
-				// If not found, try trimming whitespace
 				if (!matchingItem) {
-					matchingItem = itemAcces?.find((accessItem: any) => {
-						// Ensure code is a string before using trim
-						const itemCode =
-							typeof accessItem.code === 'string'
-								? accessItem.code
-								: String(accessItem.code);
-						return itemCode.trim() === barcodePrefix.trim();
-					});
-				}
-
-				// If still not found, try case-insensitive comparison
-				if (!matchingItem) {
-					matchingItem = itemAcces?.find((accessItem: any) => {
-						// Ensure code is a string before using toLowerCase
-						const itemCode =
-							typeof accessItem.code === 'string'
-								? accessItem.code
-								: String(accessItem.code);
-						return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
-					});
-				}
-
-				// If still not found, try comparing just the first 3 characters
-				if (!matchingItem) {
-					matchingItem = itemAcces?.find((accessItem: any) => {
-						if (!accessItem.code) return false;
-						// Ensure code is a string before using substring
-						const itemCode =
-							typeof accessItem.code === 'string'
-								? accessItem.code
-								: String(accessItem.code);
-						return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
-					});
-				}
-
-				console.log('Found matching item:', matchingItem);
-
-				// Debug raw quantity values
-				if (matchingItem) {
-					console.log('Raw quantity value:', matchingItem.quantity);
-					console.log('Quantity type:', typeof matchingItem.quantity);
-				} else {
-					console.log(
-						'No matching item found. Selected product barcode:',
-						selectedProduct,
-					);
-					// Get the item from the Accstock to show its properties
-					const stockItem = Accstock?.find(
-						(item: any) => item.barcode === selectedProduct,
-					);
-					console.log('Selected product data from stock:', stockItem);
+					Swal.fire('Error', `Item not found in inventory.`, 'error');
+					return;
 				}
 
 				// Ensure quantities are properly converted to numbers
-				// Try multiple parsing approaches to handle different data formats
 				let availableQty = 0;
 				if (matchingItem) {
 					if (typeof matchingItem.quantity === 'string') {
@@ -546,12 +501,6 @@ function index() {
 
 				console.log('Available quantity (parsed):', availableQty);
 				console.log('Requested quantity:', requestedQty);
-
-				// Check if there's enough stock available
-				if (!matchingItem) {
-					Swal.fire('Error', `Item not found in inventory.`, 'error');
-					return;
-				}
 
 				if (availableQty < requestedQty) {
 					Swal.fire(
@@ -583,17 +532,20 @@ function index() {
 					updatedItems[existingItemIndex] = {
 						...selectedItem,
 						quantity: Number(quantity),
+						discount: 0,
 					};
 					setOrderedItems(updatedItems);
 				} else {
 					const updatedItems = [
 						...orderedItems,
-						{ ...selectedItem, quantity, warranty: matchingItem?.warranty },
+						{ ...selectedItem, quantity, warranty: matchingItem?.warranty,discount: 0 },
 					];
 					setOrderedItems(updatedItems);
 				}
 			}
 			setSelectedProduct('');
+			setBarcodeInput('');
+			setCurrentBarcodeData(null);
 			setQuantity(1);
 			if (dropdownRef.current) {
 				dropdownRef.current.focus();
@@ -635,6 +587,22 @@ function index() {
 			return;
 		}
 
+		// Validate contact number format
+		const allowedPrefixes = ['70', '71', '72', '74', '75', '76', '77', '78', '79'];
+		const contactStr = String(contact);
+		const isValidPrefix = allowedPrefixes.some(prefix => contactStr.startsWith(prefix));
+		
+		if (!isValidPrefix) {
+			Swal.fire('Invalid Contact Number', 'Contact number must start with: 070, 071, 072, 074, 075, 076, 077, 078, or 079', 'error');
+			return;
+		}
+
+		// Validate contact number length (should be 10 digits total)
+		if (contactStr.length !== 9) {
+			Swal.fire('Invalid Contact Number', 'Contact number must be exactly 10 digits long.', 'error');
+			return;
+		}
+
 		if (orderedItems.length > 0) {
 			try {
 				// Check if all items have sufficient stock before proceeding
@@ -645,45 +613,9 @@ function index() {
 					const barcodePrefix = barcode.slice(0, 4);
 					console.log('Checking final stock for barcode prefix:', barcodePrefix);
 
-					// More flexible matching for final checkout
-					let matchingItem = itemAcces?.find(
-						(accessItem: any) => accessItem.code === barcodePrefix,
-					);
-
-					// If not found, try alternatives
-					if (!matchingItem) {
-						matchingItem = itemAcces?.find((accessItem: any) => {
-							// Ensure code is a string before using trim
-							const itemCode =
-								typeof accessItem.code === 'string'
-									? accessItem.code
-									: String(accessItem.code);
-							return itemCode.trim() === barcodePrefix.trim();
-						});
-					}
-
-					if (!matchingItem) {
-						matchingItem = itemAcces?.find((accessItem: any) => {
-							// Ensure code is a string before using toLowerCase
-							const itemCode =
-								typeof accessItem.code === 'string'
-									? accessItem.code
-									: String(accessItem.code);
-							return itemCode.toLowerCase() === barcodePrefix.toLowerCase();
-						});
-					}
-
-					if (!matchingItem) {
-						matchingItem = itemAcces?.find((accessItem: any) => {
-							if (!accessItem.code) return false;
-							// Ensure code is a string before using substring
-							const itemCode =
-								typeof accessItem.code === 'string'
-									? accessItem.code
-									: String(accessItem.code);
-							return itemCode.substring(0, 3) === barcodePrefix.substring(0, 3);
-						});
-					}
+					// Fetch item directly from database by code
+					const matchingItem = await fetchItemByCode(barcodePrefix);
+					console.log('Found matching item from database for stock check:', matchingItem);
 
 					// More robust parsing of quantity values
 					let availableQty = 0;
@@ -786,10 +718,10 @@ function index() {
 						const id = cid;
 						const barcodePrefix = barcode.slice(0, 4);
 
-						const matchingItem = await itemAcces?.find(
-							(accessItem: any) => accessItem.code == barcodePrefix,
-						);
-						console.log(matchingItem);
+						// Fetch item directly from database by code
+						const matchingItem = await fetchItemByCode(barcodePrefix);
+						console.log('Found matching item from database for stock update:', matchingItem);
+						
 						if (matchingItem) {
 							const quantity1 = matchingItem.quantity;
 
@@ -797,11 +729,11 @@ function index() {
 							try {
 								console.log(barcodePrefix);
 								console.log(updatedQuantity);
-								// await updateStockInOut({ id, quantity: updatedQuantity }).unwrap();
+								// Update the stock directly in Supabase
 								await supabase
-								.from('ItemManagementAcce')
-								.update({quantity:updatedQuantity})
-								.eq('code', barcodePrefix);
+									.from('ItemManagementAcce')
+									.update({ quantity: updatedQuantity })
+									.eq('code', barcodePrefix);
 							} catch (error) {
 								console.error(`Failed to update stock for ID: ${id}`, error);
 							}
@@ -875,6 +807,8 @@ function index() {
 				setName('');
 				setContact(0);
 				setSelectedProduct('');
+				setBarcodeInput('');
+				setCurrentBarcodeData(null);
 				// Refetch customer data when starting a new bill to ensure we have the latest
 				fetchCustomerData();
 				if (dropdownRef.current) {
@@ -886,6 +820,8 @@ function index() {
 			setAmount(0);
 			setQuantity(1);
 			setSelectedProduct('');
+			setBarcodeInput('');
+			setCurrentBarcodeData(null);
 			// Refetch customer data when starting a new bill to ensure we have the latest
 			fetchCustomerData();
 			if (dropdownRef.current) {
@@ -975,6 +911,57 @@ function index() {
 		contactchanget(value);
 	};
 
+	// Handle barcode lookup
+	const handleBarcodeChange = async (barcode: string) => {
+		setBarcodeInput(barcode);
+		if (barcode.length >= 6) {
+			try {
+
+				
+				let stockItem = null;
+				
+				if (barcode.length > 6) {
+					// If barcode length is greater than 6, check the last 6 digits
+					const last6Digits = barcode.slice(-6);
+					stockItem = Accstock?.find((item: any) => item.code === last6Digits);
+				} else {
+					// If barcode length is exactly 6, use the full barcode
+					stockItem = Accstock?.find((item: any) => item.code === barcode);
+				}
+				
+				if (stockItem) {
+					setCurrentBarcodeData(stockItem);
+					setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
+				} else {
+					setCurrentBarcodeData(null);
+					setSelectedProduct('');
+				}
+			} catch (error) {
+				console.error('Error looking up barcode:', error);
+				setCurrentBarcodeData(null);
+			}
+		} else {
+			setCurrentBarcodeData(null);
+			setSelectedProduct('');
+		}
+	};
+
+	const handleBarcodeKeyPress = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			if (currentBarcodeData && quantity > 0) {
+				handlePopupOk();
+			} else if (!currentBarcodeData && barcodeInput.length >= 4) {
+				Swal.fire('Error', 'Barcode not found in inventory.', 'error');
+			}
+		}
+		if (e.key === 'ArrowDown') {
+			if (quantityRef.current) {
+				quantityRef.current.focus();
+			}
+			e.preventDefault();
+		}
+	};
+
 	if (isLoading) {
 		// console.log(isLoading);
 		return (
@@ -1026,9 +1013,8 @@ function index() {
 												<tr>
 													<th>Name</th>
 													<th>U/Price(LKR)</th>
-
-													<th>Selling Amount(LKR)</th>
 													<th>Qty</th>
+													<th>Unit Selling Price</th>
 													<th>Discount</th>
 													<th>Net Value(LKR)</th>
 													<th></th>
@@ -1040,44 +1026,81 @@ function index() {
 														<td>
 															{val.category} {val.model} {val.brand}
 														</td>
-
 														<td className='text-end'>
 															{val.sellingPrice.toFixed(2)}
 														</td>
-
-														<td>
-															<FormGroup
-																id='quantity'
-																className='col-12'>
-																<Input
-																	type='number'
-																	min={0}
-																	onChange={(
-																		e: React.ChangeEvent<HTMLInputElement>,
-																	) => {
-																		let value = e.target.value;
-																		if (
-																			value.length > 1 &&
-																			value.startsWith('0')
-																		) {
-																			value =
-																				value.substring(1);
-																		}
-																		// console.log(value);
-																		handleDiscountChange(
-																			val.sellingPrice,
-																			index,
-																			value,
-																			val.quantity,
-																		);
-																	}}
-																	value={val.finalsellingprice}
-																	validFeedback='Looks good!'
-																/>
-															</FormGroup>
-														</td>
 														<td className='text-end'>{val.quantity}</td>
-														<td>{val.discount}</td>
+														<td>
+															<div className='d-flex gap-2 align-items-center'>
+																<FormGroup
+																	id='quantity'
+																	className='flex-grow-1'>
+																	<Input
+																		type='number'
+																		min={0}
+																		onChange={(
+																			e: React.ChangeEvent<HTMLInputElement>,
+																		) => {
+																			let value =
+																				e.target.value;
+																			if (
+																				value.length > 1 &&
+																				value.startsWith(
+																					'0',
+																				)
+																			) {
+																				value =
+																					value.substring(
+																						1,
+																					);
+																			}
+																			// console.log(value);
+																			handleDiscountChange(
+																				val.sellingPrice,
+																				index,
+																				value,
+																				val.quantity,
+																			);
+																		}}
+																		value={
+																			val.finalsellingprice
+																		}
+																		validFeedback='Looks good!'
+																	/>
+																</FormGroup>
+																{val.discount > 0 && (
+																	<Button
+																		color='danger'
+																		size='sm'
+																		icon='cancel'
+																		onClick={() => {
+																			// Reset the selling price back to original
+																			setOrderedItems(
+																				(prevItems) =>
+																					prevItems.map(
+																						(
+																							item,
+																							i,
+																						) =>
+																							i ===
+																							index
+																								? {
+																										...item,
+																										discount: 0,
+																										finalsellingprice:
+																											item.sellingPrice,
+																								  }
+																								: item,
+																					),
+																			);
+																		}}
+																		title='Cancel discount changes'></Button>
+																)}
+															</div>
+														</td>
+														<td>
+															{val.discount}
+														</td>
 														<td className='text-end'>
 															{(
 																val.sellingPrice * val.quantity -
@@ -1175,25 +1198,29 @@ function index() {
 								)}
 
 								<FormGroup id='product' label='Barcode ID' className='col-12'>
-									<Dropdown
-										aria-label='State'
-										editable
+									<Input
 										ref={dropdownRef}
-										type='number'
-										placeholder='-- Select Product --'
-										className='selectpicker col-12'
-										options={
-											items
-												? items.map((type: any) => ({
-														value: type.barcode,
-														label: type.barcode.slice(-6),
-												  }))
-												: [{ value: '', label: 'No Data' }]
-										}
-										onChange={(e: any) => setSelectedProduct(e.target.value)}
-										onKeyDown={handleDropdownKeyPress}
-										value={selectedProduct}
+										type='text'
+										placeholder='Enter barcode...'
+										className='col-12'
+										onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+											handleBarcodeChange(e.target.value);
+										}}
+										onKeyDown={handleBarcodeKeyPress}
+										value={barcodeInput}
+										validFeedback={currentBarcodeData ? 'Product found!' : ''}
+										isValid={currentBarcodeData ? true : undefined}
 									/>
+									{currentBarcodeData && (
+										<small className='text-success mt-1'>
+											Found: {currentBarcodeData.category} {currentBarcodeData.model} {currentBarcodeData.brand}
+										</small>
+									)}
+									{barcodeInput.length >= 4 && !currentBarcodeData && (
+										<small className='text-danger mt-1'>
+											Barcode not found in inventory
+										</small>
+									)}
 								</FormGroup>
 								<FormGroup id='quantity' label='Quantity' className='col-12 mt-2'>
 									<Input
