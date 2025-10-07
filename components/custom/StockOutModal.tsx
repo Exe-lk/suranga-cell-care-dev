@@ -52,6 +52,7 @@ interface StockOut {
 	stock: string;
 	status: boolean;
 	description: string;
+	code: string;
 }
 
 const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity, refetch }) => {
@@ -67,6 +68,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		nic: '',
 		barcode: '',
 		cost: '',
+		code: '',
 		sellingPrice: '',
 		stock: 'stockOut',
 		status: true,
@@ -87,7 +89,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			setStockOut(stockOutData);
 		}
 	}, [isSuccess, stockOutData]);
-
+console.log(stockInData)
 	// Filter for accessory stock-in items only
 	const filteredStockIn = stockInData?.filter(
 		(item: { stock: string; type: string }) => 
@@ -313,7 +315,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 						<datalist id='barcode-options'>
 							{stockInLoading && <option value=''>Loading barcodes...</option>}
 							{stockInError && <option value=''>Error fetching barcodes</option>}
-							{filteredStockIn?.map(
+							{filteredStockIn?.filter((item:any) => item.barcode.startsWith(stockOut.code)).map(
 								(
 									item: {
 										id: string;

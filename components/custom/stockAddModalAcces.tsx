@@ -7,7 +7,7 @@ import FormGroup from '../bootstrap/forms/FormGroup';
 import Input from '../bootstrap/forms/Input';
 import Button from '../bootstrap/Button';
 import { useAddStockInMutation } from '../../redux/slices/stockInOutAcceApiSlice';
-import { useGetItemAcceByIdQuery } from '../../redux/slices/itemManagementAcceApiSlice';
+import { useGetItemAcceByIdQuery, useGetItemAcces1Query } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useGetItemAccesQuery } from '../../redux/slices/itemManagementAcceApiSlice';
 import { useUpdateStockInOutMutation } from '../../redux/slices/stockInOutAcceApiSlice';
 import { useGetStockInOutsQuery } from '../../redux/slices/stockInOutAcceApiSlice';
@@ -75,7 +75,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		isError,
 	} = useGetSuppliersQuery(undefined);
 	const { data: stockInData, isSuccess } = useGetItemAcceByIdQuery(id);
-	const [addstockIn, { isLoading }] = useAddStockInMutation();
+	const [addstockIn] = useAddStockInMutation();
 	const [updateStockInOut] = useUpdateStockInOutMutation();
 	const [updateItemAcce] = useUpdateItemAcceMutation();
 	const { data: stockInOuts } = useGetStockInOutsQuery(undefined);
@@ -86,7 +86,12 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 	const [imageurl, setImageurl] = useState<any>(null);
 	const { data: dealers } = useGetDealersQuery(undefined);
 	const { refetch: refetchItemData } = useGetItemAcceByIdQuery(id);
-
+	const {
+		data: itemAcces,
+		error,
+		isLoading,
+		refetch: refetchItemAcces,
+	} = useGetItemAcces1Query({ page: 1, perPage: 10000, lastDoc: null,searchtearm:'' });
 	// Function to generate 6-digit stock-in code sequentially
 	const generateStockInCode = (existingStockInOuts: any[]) => {
 		if (!existingStockInOuts || existingStockInOuts.length === 0) {
@@ -216,7 +221,13 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 		enableReinitialize: true,
 		validate: (values) => {
 			const errors: Record<string, string> = {};
-			if (values.type === 'Accessory') {
+			if (values.type === 'Mobile') {
+				// For Mobile type, quantity must always be 1
+				if (!values.quantity || values.quantity !== '1') {
+					// Auto-correct the quantity to 1 for Mobile type
+					values.quantity = '1';
+				}
+			} else if (values.type === 'Accessory') {
 				if (!values.quantity) {
 					errors.quantity = 'Quantity is required';
 				} else if (parseInt(values.quantity) <= 0) {
@@ -284,7 +295,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 				console.log("Generated barcode value:", generatedbarcode);
 				console.log("Form values barcode:", values.barcode);
 				console.log("All form values:", values);
-				
+				console.log("Quantity:", values.quantity);
 				// Show processing modal
 				Swal.fire({
 					title: 'Processing...',
@@ -342,6 +353,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 					// 4. Refresh data and show success
 					await refetch();
 					await refetchItemData(); // Ensure we get the latest item data
+					await refetchItemAcces();
 					await Swal.fire({
 						icon: 'success',
 						title: 'Stock In Added Successfully',
@@ -373,6 +385,13 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 			}
 		},
 	});
+
+	// Effect to automatically set quantity to 1 when type is Mobile
+	useEffect(() => {
+		if (formik.values.type === 'Mobile') {
+			formik.setFieldValue('quantity', '1');
+		}
+	}, [formik.values.type]);
 
 	const formatMobileNumber = (value: string) => {
 		let sanitized = value.replace(/\D/g, '');
@@ -558,6 +577,27 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 							)} */}
 						</>
 					)}
+					{formik.values.type === 'Mobile' ? (
+						<FormGroup
+						id='quantity'
+						label='Quantity'
+						className='col-md-6'>
+						<Input
+							type='number'
+							value={formik.values.quantity || 1}
+							disabled
+							onChange={(e) => {
+								formik.setFieldValue('quantity', '1');
+							}}
+							onBlur={formik.handleBlur}
+							isValid={formik.isValid}
+							isTouched={formik.touched.quantity}
+							invalidFeedback={formik.errors.quantity}
+							validFeedback='Looks good!'
+							min={1}
+						/>
+					</FormGroup>
+					):(
 					<FormGroup
 						id='quantity'
 						label='Quantity'
@@ -574,6 +614,7 @@ const StockAddModal: FC<StockAddModalProps> = ({ id, isOpen, setIsOpen, quantity
 							min={1}
 						/>
 					</FormGroup>
+					)}
 
 					<FormGroup id='date' label='Date In' className='col-md-6'>
 						<Input

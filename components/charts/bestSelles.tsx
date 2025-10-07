@@ -9,6 +9,7 @@ import Card, {
 import Chart, { IChartOptions } from '../../components/extras/Chart';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 const ColumnWithDataLabels = () => {
 	const [topItems, setTopItems] = useState<string[]>([]);
@@ -33,15 +34,20 @@ const ColumnWithDataLabels = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const dataCollection = collection(firestore, 'accessorybill');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => ({
-					...doc.data(),
+				// const dataCollection = collection(firestore, 'accessorybill');
+				// const querySnapshot = await getDocs(dataCollection);
+
+				const { data: querySnapshot, error } = await supabase
+				.from('accessorybill')
+				.select('*');
+			
+				const firebaseData = querySnapshot?.map((doc) => ({
+					...doc,
 					cid: doc.id,
 				}));
 
 				// Extract orders and aggregate quantity for each product
-				const productSalesMap = firebaseData.flatMap((bill:any) => bill.orders).reduce(
+				const productSalesMap = firebaseData?.flatMap((bill:any) => bill.orders).reduce(
 					(acc, order) => {
 						if (acc[order.cid]) {
 							acc[order.cid].quantity += Number(order.quantity);
@@ -88,14 +94,6 @@ const ColumnWithDataLabels = () => {
 
 	return (
 		<div className='col-lg-6'>
-			{/* <h2>Top 10 Items Sold This Month</h2>
-			<ul>
-				{topItems.map((item, index) => (
-					<li key={index}>
-						{index + 1}. {item} - Sold: {topqty[index]}
-					</li>
-				))}
-			</ul> */}
 			<Card stretch>
 				<CardHeader>
 					<CardLabel icon='BarChart'>

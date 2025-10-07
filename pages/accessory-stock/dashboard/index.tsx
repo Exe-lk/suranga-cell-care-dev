@@ -21,9 +21,9 @@ const Index: NextPage = () => {
 				<div className='row'>
 					<Bestsells />
 					<BestCategory/>
-					<LestCategory/>
+					{/* <LestCategory/>
 					<Bestbrand/>
-					<Lestbrand/>
+					<Lestbrand/> */}
 					<Category/>
 					{/* <LineWithLabel1 />
 					<PieBasic />

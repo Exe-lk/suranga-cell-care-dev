@@ -13,6 +13,10 @@ export const stockInOutAcceApiSlice = createApi({
       query: (id) => `stockInOutAcce/${id}`,
       providesTags: ['StockInOutAcce'],
     }),
+    getStockInOutByBarcode: builder.query({
+      query: (barcode) => `stockInOutAcce/barcode/${barcode}`,
+      providesTags: ['StockInOutAcce'],
+    }),
     getAllStockRecords: builder.query({
       query: () => `stockInOutAcce/route1`, 
       providesTags: ['StockInOutAcce'],
@@ -61,6 +65,7 @@ export const stockInOutAcceApiSlice = createApi({
 export const {
   useGetStockInOutsQuery,
   useGetStockInOutByIdQuery,
+  useGetStockInOutByBarcodeQuery,
   useGetAllStockRecordsQuery,
   useGetStockInOutByDateQuery,  // Now accepts date from frontend
   useGetDeleteStockInOutsQuery,

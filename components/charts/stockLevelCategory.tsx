@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Chart, { IChartOptions } from '../../components/extras/Chart';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../../firebaseConfig';
+import { supabase } from '../../lib/supabase';
 
 const CategoryQuantityBarChart = () => {
 	const [chartOptions, setChartOptions] = useState<IChartOptions>({
@@ -28,13 +29,19 @@ const CategoryQuantityBarChart = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const dataCollection = collection(firestore, 'ItemManagementAcce');
-				const querySnapshot = await getDocs(dataCollection);
-				const firebaseData = querySnapshot.docs.map((doc) => doc.data());
 
+
+				const { data: querySnapshot, error } = await supabase
+				.from('ItemManagementAcce')
+				.select('*');
+			
+				const firebaseData = querySnapshot?.map((doc) => ({
+					...doc,
+					cid: doc.id,
+				}));
 				const categoryTotals: any = {};
 
-				firebaseData.forEach((item) => {
+				firebaseData?.forEach((item) => {
 					if (item.category && typeof item.quantity === 'number') {
 						if (!categoryTotals[item.category]) {
 							categoryTotals[item.category] = 0;

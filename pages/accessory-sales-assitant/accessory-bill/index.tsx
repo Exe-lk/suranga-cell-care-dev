@@ -12,6 +12,7 @@ import Button from '../../../components/bootstrap/Button';
 import Checks, { ChecksGroup } from '../../../components/bootstrap/forms/Checks';
 import {
 	useGetStockInOutsQuery as useGetStockInOutsdisQuery,
+	useGetStockInOutByBarcodeQuery,
 	useUpdateStockInOutMutation,
 } from '../../../redux/slices/stockInOutAcceApiSlice';
 import MyDefaultHeader from '../../_layout/_headers/AccessoryBillHeader';
@@ -432,7 +433,7 @@ function index() {
 
 	const fetchItemByCode = async (code: string) => {
 		try {
-			const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}itemManagementAcce/${code}`);
+			const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}itemManagementAcce/item/${code}`);
 			if (!response.ok) {
 				return null;
 			}
@@ -584,6 +585,10 @@ function index() {
 		// Validate contact number first - make it required
 		if (!contact || contact === 0 || String(contact).trim() === '') {
 			Swal.fire('Error', 'Contact number is required to print the bill.', 'error');
+			return;
+		}
+		if (!name || String(name).trim() === ''|| name.length < 3) {
+			Swal.fire('Error', 'Name is required to print the bill.', 'error');
 			return;
 		}
 

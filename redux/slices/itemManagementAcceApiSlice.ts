@@ -30,6 +30,10 @@ export const ItemAcceApiSlice = createApi({
       query: (id) => `itemManagementAcce/${id}`,
       providesTags: ['ItemAcce'],
     }),
+    getItemAcceByCode: builder.query({
+      query: (code) => `itemManagementAcce/code/${code}`,
+      providesTags: ['ItemAcce'],
+    }),
     getDeleteItemAcces: builder.query({
       query: () => 'itemManagementAcce/bin',
       providesTags: ['ItemAcce'],
@@ -64,6 +68,7 @@ export const {
   useGetItemAcces1Query,
   useGetAllItemAccesForCodeGenQuery,
   useGetItemAcceByIdQuery,
+  useGetItemAcceByCodeQuery,
   useGetDeleteItemAccesQuery,
   useAddItemAcceMutation,
   useUpdateItemAcceMutation,

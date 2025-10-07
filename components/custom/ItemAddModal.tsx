@@ -59,7 +59,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 
 		const maxCode = Math.max(...existingCodes);
 		const nextCode = maxCode + 1;
-		
+
 		// Ensure minimum 4 digits
 		return nextCode.toString().padStart(4, '0');
 	};
@@ -84,7 +84,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			reorderLevel: '',
 			description: '',
 			status: true,
-			warranty:''
+			warranty: '',
 		},
 		validate: (values) => {
 			const errors: Record<string, string> = {};
@@ -102,6 +102,12 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			}
 			if (!values.brand) {
 				errors.brand = 'Brand is required';
+			}
+			if (!values.warranty) {
+				errors.warranty = 'Warranty is required';
+			}
+			if (!values.reorderLevel) {
+				errors.reorderLevel = 'Reorder Level is required';
 			}
 			return errors;
 		},
@@ -266,8 +272,8 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 								value={selectedBrand}
 								onBlur={formik.handleBlur}
 								isTouched={formik.touched.brand}
-							invalidFeedback={formik.errors.brand}
-							validFeedback='Looks good!'>
+								invalidFeedback={formik.errors.brand}
+								validFeedback='Looks good!'>
 								<Option value=''>Select Brand</Option>
 								{filteredBrands?.map((brand: any, index: any) => (
 									<Option key={index} value={brand.name}>
@@ -286,8 +292,8 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 								onBlur={formik.handleBlur}
 								name='model'
 								isTouched={formik.touched.model}
-							invalidFeedback={formik.errors.model}
-							validFeedback='Looks good!'>
+								invalidFeedback={formik.errors.model}
+								validFeedback='Looks good!'>
 								<Option value=''>Select Model</Option>
 								{filteredModels?.map((model: any, index: any) => (
 									<Option key={index} value={model.name}>
@@ -324,31 +330,36 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						/>
 					</FormGroup>
 					<FormGroup id='warranty' label='Warranty' className='col-md-6'>
-								<Select
-									id='warranty'
-									name='warranty'
-									ariaLabel='warranty'
-									onChange={formik.handleChange}
-									value={formik.values.warranty}
-									onBlur={formik.handleBlur}
-								>
-									<option value=''>Select Warranty</option>
-									<option value='No warranty'>No warranty</option>
-									<option value='14 day checking warranty'>14 day checking warranty</option>
-									<option value='1 month warranty'>1 month warranty</option>
-									<option value='3 month warranty'>3 month warranty</option>
-									<option value='6 month warranty'>6 month warranty</option>
-									<option value='1 Year warranty'>1 Year warranty</option>
-									<option value='5 year warranty'>5 year warranty</option>
-									<option value='Company 1 Year warranty'>Company 1 Year warranty</option>
-									<option value='Company 5 Year warranty'>Company 5 Year warranty</option>
-								</Select>
-							</FormGroup>
+						<Select
+							id='warranty'
+							name='warranty'
+							ariaLabel='warranty'
+							onChange={formik.handleChange}
+							value={formik.values.warranty}
+							onBlur={formik.handleBlur}
+							isValid={formik.isValid}
+							isTouched={formik.touched.warranty}
+							invalidFeedback={formik.errors.warranty}
+							validFeedback='Looks good!'>
+							<option value=''>Select Warranty</option>
+							<option value='No warranty'>No warranty</option>
+							<option value='14 day checking warranty'>
+								14 day checking warranty
+							</option>
+							<option value='1 month warranty'>1 month warranty</option>
+							<option value='3 month warranty'>3 month warranty</option>
+							<option value='6 month warranty'>6 month warranty</option>
+							<option value='1 Year warranty'>1 Year warranty</option>
+							<option value='5 year warranty'>5 year warranty</option>
+							<option value='Company 1 Year warranty'>Company 1 Year warranty</option>
+							<option value='Company 5 Year warranty'>Company 5 Year warranty</option>
+						</Select>
+					</FormGroup>
 				</div>
 			</ModalBody>
 			<ModalFooter className='p-4'>
 				<Button color='success' onClick={() => formik.handleSubmit()}>
-				Create Item
+					Create Item
 				</Button>
 			</ModalFooter>
 		</Modal>

@@ -71,7 +71,7 @@ const Index: NextPage = () => {
 
 	const [endDate, setEndDate] = useState<string>('');
 	const inputRef = useRef<HTMLInputElement>(null);
-
+console.log(StockInOuts);
 	// const filteredTransactions = StockInOuts?.filter((trans: any) => {
 	// 	const transactionDate = new Date(trans.date); 
 	// 	const start = startDate ? new Date(startDate) : null; 

@@ -48,7 +48,9 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 	const itemAcceToEdit = itemAcces?.find((itemAcce: any) => itemAcce.id === id);
 	const [updateItemAcce, { isLoading }] = useUpdateItemAcceMutation();
 
-	const formik = useFormik({
+	const formik = useFormik(
+		{
+
 		enableReinitialize: true,
 		initialValues: {
 			id: '',
@@ -62,7 +64,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 			reorderLevel: itemAcceToEdit?.reorderLevel || '',
 			description: itemAcceToEdit?.description || '',
 			status: true,
-			warranty:itemAcceToEdit?.warranty || '',
+			warranty: itemAcceToEdit?.warranty || '',
 		},
 		validate: (values) => {
 			const errors: {
@@ -103,10 +105,10 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 					category: values.category,
 					model: values.model,
 					brand: values.brand,
-					quantity: values.quantity,
+					// quantity: values.quantity,
 					reorderLevel: values.reorderLevel,
 					description: values.description,
-					warranty:values.warranty
+					warranty: values.warranty,
 				};
 				await updateItemAcce(data).unwrap();
 				await refetch();
@@ -187,7 +189,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 							<Option value='Accessory'>Accessory</Option>
 						</Select>
 					</FormGroup>
-					<FormGroup id='quantity' label='Quantity' className='col-md-6'>
+					{/* <FormGroup id='quantity' label='Quantity' className='col-md-6'>
 						<Input
 							type='number'
 							onChange={formik.handleChange}
@@ -196,7 +198,7 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 							name='quantity'
 							readOnly
 						/>
-					</FormGroup>
+					</FormGroup> */}
 					{formik.values.type === 'Mobile' && (
 						<FormGroup id='mobileType' label='Mobile Type' className='col-md-6'>
 							<Select
@@ -289,26 +291,27 @@ const ItemAddModal: FC<ItemAddModalProps> = ({ id, isOpen, setIsOpen }) => {
 						/>
 					</FormGroup>
 					<FormGroup id='warranty' label='Warranty' className='col-md-6'>
-								<Select
-									id='warranty'
-									name='warranty'
-									ariaLabel='warranty'
-									onChange={formik.handleChange}
-									value={formik.values.warranty}
-									onBlur={formik.handleBlur}
-								>
-									<option value=''>Select Warranty</option>
-									<option value='No warranty '>No warranty</option>
-									<option value='14 day checking warranty'>14 day checking warranty</option>
-									<option value='1 month warranty'>1 month warranty</option>
-									<option value='3 month warranty'>3 month warranty</option>
-									<option value='6 month warranty'>6 month warranty</option>
-									<option value='1 Year warranty'>1 Year warranty</option>
-									<option value='5 year warranty'>5 year warranty</option>
-									<option value='Company 1 Year warranty'>Company 1 Year warranty</option>
-									<option value='Company 5 Year warranty'>Company 5 Year warranty</option>									
-								</Select>
-							</FormGroup>
+						<Select
+							id='warranty'
+							name='warranty'
+							ariaLabel='warranty'
+							onChange={formik.handleChange}
+							value={formik.values.warranty}
+							onBlur={formik.handleBlur}>
+							<option value=''>Select Warranty</option>
+							<option value='No warranty '>No warranty</option>
+							<option value='14 day checking warranty'>
+								14 day checking warranty
+							</option>
+							<option value='1 month warranty'>1 month warranty</option>
+							<option value='3 month warranty'>3 month warranty</option>
+							<option value='6 month warranty'>6 month warranty</option>
+							<option value='1 Year warranty'>1 Year warranty</option>
+							<option value='5 year warranty'>5 year warranty</option>
+							<option value='Company 1 Year warranty'>Company 1 Year warranty</option>
+							<option value='Company 5 Year warranty'>Company 5 Year warranty</option>
+						</Select>
+					</FormGroup>
 				</div>
 			</ModalBody>
 			<ModalFooter className='px-4 pb-4'>

@@ -28,6 +28,10 @@ interface Orders {
 	date: string;
 	amount: string;
 	time: string;
+	name?: string;
+	contact?: string;
+	netValue?: number;
+	totalDiscount?: number;
 	orders: { category: string; price: number | string; name: string; quentity: any }[];
 }
 interface User {
@@ -56,22 +60,50 @@ const Index: React.FC = () => {
 	const toggleRow = (index: any) => {
 		setExpandedRow(expandedRow === index ? null : index);
 	};
+
+	// Helper function to convert month name to number
+	const getMonthNumber = (monthName: string): number => {
+		const months = {
+			'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+			'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+		};
+		return months[monthName as keyof typeof months] || 0;
+	};
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const { data, error }: any = await supabase.from('accessorybill').select('*');
+				let query = supabase.from('accessorybill').select('*');
+
+				// If a specific date is selected, filter by that date
+				if (searchDate) {
+					query = query.eq('date', searchDate);
+				}
+				// If only month is selected (without specific date), filter by year-month
+				else if (searchmonth && searchyear) {
+					const startOfMonth = new Date(searchyear, getMonthNumber(searchmonth), 1).toISOString().split('T')[0];
+					const endOfMonth = new Date(searchyear, getMonthNumber(searchmonth) + 1, 0).toISOString().split('T')[0];
+					query = query.gte('date', startOfMonth).lte('date', endOfMonth);
+				}
+				// If only year is selected, filter by year
+				else if (searchyear && searchyear !== new Date().getFullYear()) {
+					const startOfYear = `${searchyear}-01-01`;
+					const endOfYear = `${searchyear}-12-31`;
+					query = query.gte('date', startOfYear).lte('date', endOfYear);
+				}
+
+				const { data, error }: any = await query.order('id', { ascending: false });
 
 				if (error) throw error;
 
 				setOrders(data);
-				// console.log(data);
+				setFilteredOrders(data); // Set filtered orders directly since filtering is done at DB level
 			} catch (error) {
 				console.error('Error fetching data:', error);
 			}
 		};
 
 		fetchData();
-	}, []);
+	}, [searchDate, searchmonth, searchyear]); // Re-fetch when date filters change
 
 		useEffect(() => {
 			const fetchData = async () => {
@@ -90,34 +122,8 @@ const Index: React.FC = () => {
 			fetchData();
 		}, []);
 
-	useEffect(() => {
-		const filterOrdersByDate = () => {
-			return orders.filter((order) => {
-				const orderDate = new Date(order.date);
-				const orderYear = orderDate.getFullYear();
-				const orderMonth = orderDate.toLocaleString('default', { month: 'short' });
-				const formattedSearchDate = new Date(searchDate).toDateString();
-
-				console.log(`Order Date: ${order.date}, Year: ${orderYear}, Month: ${orderMonth}`);
-				console.log(
-					`Search Year: ${searchyear}, Search Month: ${searchmonth}, Search Date: ${searchDate}`,
-				);
-
-				if (searchDate && new Date(order.date).toDateString() !== formattedSearchDate) {
-					return false;
-				}
-				if (searchmonth && searchmonth !== orderMonth) {
-					return false;
-				}
-				// if (searchyear && searchyear !== orderYear) {
-				// 	return false;
-				// }
-				return true;
-			});
-		};
-
-		setFilteredOrders(filterOrdersByDate());
-	}, [orders, searchyear, searchmonth, searchDate]);
+	// Since we're now filtering at the database level, we don't need client-side filtering
+	// The filteredOrders will be set directly from the database query results
 
 	const getCashierName = (email: string) => {
 		const user1 = user.find((user: { email: string }) => user.email === email);
@@ -299,24 +305,46 @@ const Index: React.FC = () => {
 												.filter((val) => {
 													if (searchTerm === '') {
 														return val;
-													} else if (
-														val.id.toString().includes(searchTerm) ||
-														val.orders.some((data: any) =>
-															[
-																data.category,
-																data.model,
-																data.brand,
-															].some((field) =>
-																field
-																	.toLowerCase()
-																	.includes(
-																		searchTerm.toLowerCase(),
-																	),
-															),
-														)
-													) {
-														return val;
 													}
+													
+													const searchLower = searchTerm.toLowerCase();
+													
+													// Search in bill ID
+													if (val.id.toString().toLowerCase().includes(searchLower)) {
+														return true;
+													}
+													
+													// Search in customer name
+													if (val.name && val.name.toString().toLowerCase().includes(searchLower)) {
+														return true;
+													}
+													
+													// Search in contact number
+													if (val.contact && val.contact.toString().toLowerCase().includes(searchLower)) {
+														return true;
+													}
+													
+													// Search in cashier name
+													const cashierName = getCashierName(val.casheir);
+													if (cashierName && cashierName.toLowerCase().includes(searchLower)) {
+														return true;
+													}
+													
+													// Search in order items
+													if (val.orders && val.orders.some((data: any) =>
+														[
+															data.category,
+															data.model,
+															data.brand,
+														].some((field) =>
+															field && 
+															field.toString().toLowerCase().includes(searchLower),
+														),
+													)) {
+														return true;
+													}
+													
+													return false;
 												})
 												.sort((a: any, b: any) => b.id - a.id)
 												.map((order: any, index) => (
