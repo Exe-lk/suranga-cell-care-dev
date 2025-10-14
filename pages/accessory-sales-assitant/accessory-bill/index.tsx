@@ -954,7 +954,9 @@ function index() {
 	const handleBarcodeKeyPress = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') {
 			if (currentBarcodeData && quantity > 0) {
-				handlePopupOk();
+				if (quantityRef.current) {
+					quantityRef.current.focus();
+				}
 			} else if (!currentBarcodeData && barcodeInput.length >= 4) {
 				Swal.fire('Error', 'Barcode not found in inventory.', 'error');
 			}
@@ -1228,19 +1230,28 @@ function index() {
 									)}
 								</FormGroup>
 								<FormGroup id='quantity' label='Quantity' className='col-12 mt-2'>
-									<Input
+								<Input
 										ref={quantityRef}
 										type='number'
 										onKeyDown={handleaddKeyPress}
 										onChange={(e: any) => {
 											let value = e.target.value;
-											if (value.length > 1 && value.startsWith('1')) {
-												value = value.substring(1);
+											// if (value.length > 1 && value.startsWith('1')) {
+											// 	value = value.substring(1);
+											// }
+											if (Number(value) >= 51) {
+												Swal.fire(
+													'Error',
+													'Quantity must be less than 50',
+													'error',
+												);
+												return;
 											}
 											setQuantity(value);
 										}}
 										value={quantity}
 										min={1}
+										max={50}
 										validFeedback='Looks good!'
 									/>
 								</FormGroup>
