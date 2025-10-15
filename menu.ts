@@ -598,6 +598,14 @@ export const addminPagesMenu = {
 		icon: 'PersonalInjury',
 
 	},
+	Customer: {
+		id: 'Customer',
+		text: 'Customer ',
+		path: 'admin/customer',
+		icon: 'Person',
+
+	},
+	
 	stockUpdate: {
 		id: 'dashboard',
 		text: 'Stock Update',
