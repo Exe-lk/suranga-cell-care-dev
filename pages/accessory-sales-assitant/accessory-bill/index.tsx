@@ -229,8 +229,13 @@ function index() {
 		// If we found a matching customer, set the name and status
 		if (matchingCustomer) {
 			console.log('Found matching customer:', matchingCustomer);
-			setName(matchingCustomer.name);
-			setStaus(true);
+			if(valueStr.length == 9){
+				setName(matchingCustomer.name);
+				setStaus(true);
+			} else {
+				setName('');
+				setStaus(false);
+			}
 		} else {
 			// No match found, allow manual entry
 			setStaus(false);
@@ -552,7 +557,7 @@ function index() {
 						{
 							...selectedItem,
 							quantity,
-							warranty: warranty ? (warranty + "day warranty") : matchingItem?.warranty,
+							warranty: warranty ? warranty + 'day warranty' : matchingItem?.warranty,
 							discount: 0,
 						},
 					];
@@ -949,15 +954,31 @@ function index() {
 			try {
 				let stockItem = null;
 
-				if (barcode.length > 6) {
+				if (barcode.length ==10) {
 					// If barcode length is greater than 6, check the last 6 digits
 					const last6Digits = barcode.slice(-6);
+					console.log('Checking barcode:', barcode, '=>', last6Digits);
 
 					const { data, error } = await supabase
 						.from('StockAcce')
 						.select('*')
 						.eq('code', last6Digits);
-					stockItem = data?.[0];
+
+					if (error) {
+						console.error('Supabase Error:', error);
+					} else if (data && data.length > 0) {
+						 stockItem = await data[0];
+						 if (stockItem) {
+							setCurrentBarcodeData(stockItem);
+							setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
+						} else {
+							setCurrentBarcodeData(null);
+							setSelectedProduct('');
+						}
+						console.log('✅ Stock Item found:', stockItem);
+					} else {
+						console.warn('⚠️ No Stock Item found for code:', last6Digits);
+					}
 				} else {
 					const { data, error } = await supabase
 						.from('StockAcce')
@@ -966,13 +987,7 @@ function index() {
 					stockItem = data?.[0];
 				}
 
-				if (stockItem) {
-					setCurrentBarcodeData(stockItem);
-					setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
-				} else {
-					setCurrentBarcodeData(null);
-					setSelectedProduct('');
-				}
+				
 			} catch (error) {
 				console.error('Error looking up barcode:', error);
 				setCurrentBarcodeData(null);
@@ -1217,8 +1232,7 @@ function index() {
 												type='number'
 												// onKeyDown={handleaddKeyPress}
 												onChange={(e: any) => {
-													
-														setWarranty(e.target.value);
+													setWarranty(e.target.value);
 												}}
 												value={warranty}
 												min={1}
