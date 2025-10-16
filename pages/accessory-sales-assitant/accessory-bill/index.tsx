@@ -229,7 +229,7 @@ function index() {
 		// If we found a matching customer, set the name and status
 		if (matchingCustomer) {
 			console.log('Found matching customer:', matchingCustomer);
-			if(valueStr.length == 9){
+			if (valueStr.length == 9) {
 				setName(matchingCustomer.name);
 				setStaus(true);
 			} else {
@@ -948,65 +948,61 @@ function index() {
 	};
 
 	// Handle barcode lookup
-	const handleBarcodeChange = async (barcode: string) => {
+	const handleBarcodeChange1 = async (barcode: string) => {
 		setBarcodeInput(barcode);
-		if (barcode.length >= 6) {
-			try {
-				let stockItem = null;
+		let stockItem = null;
 
-				if (barcode.length ==10) {
-					// If barcode length is greater than 6, check the last 6 digits
-					const last6Digits = barcode.slice(-6);
-					console.log('Checking barcode:', barcode, '=>', last6Digits);
+		const last6Digits = barcode.slice(-6);
+		console.log('Checking barcode:', barcode, '=>', last6Digits);
 
-					const { data, error } = await supabase
-						.from('StockAcce')
-						.select('*')
-						.eq('code', last6Digits);
-
-					if (error) {
-						console.error('Supabase Error:', error);
-					} else if (data && data.length > 0) {
-						 stockItem = await data[0];
-						 if (stockItem) {
-							setCurrentBarcodeData(stockItem);
-							setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
-						} else {
-							setCurrentBarcodeData(null);
-							setSelectedProduct('');
-						}
-						console.log('✅ Stock Item found:', stockItem);
-					} else {
-						console.warn('⚠️ No Stock Item found for code:', last6Digits);
-					}
-				} else {
-					const { data, error } = await supabase
-						.from('StockAcce')
-						.select('*')
-						.eq('code', barcode);
-					stockItem = data?.[0];
-					console.log(stockItem);
-					if (stockItem) {
-						setCurrentBarcodeData(stockItem);
-						setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
-					} else {
-						setCurrentBarcodeData(null);
-						setSelectedProduct('');
-					}
-				}
-
-
-				
-			} catch (error) {
-				console.error('Error looking up barcode:', error);
-				setCurrentBarcodeData(null);
-			}
+		const { data, error } = await supabase
+			.from('StockAcce')
+			.select('*')
+			.eq('code', last6Digits);
+console.log(data);
+		if (error) {
+			console.error('Supabase Error:', error);
+		} else if (data && data.length > 0) {
+			stockItem = await data[0];
+			if (stockItem) {
+				setCurrentBarcodeData(stockItem);
+				setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
+			} 
+			// else {
+			// 	setCurrentBarcodeData(null);
+			// 	setSelectedProduct('');
+			// }
+			console.log('✅ Stock Item found:', stockItem);
 		} else {
-			setCurrentBarcodeData(null);
-			setSelectedProduct('');
+			console.warn('⚠️ No Stock Item found for code:', last6Digits);
 		}
 	};
+	const handleBarcodeChange = async (barcode: string) => {
+		setBarcodeInput(barcode);
 
+		try {
+			let stockItem = null;
+			if (barcode.length === 6) {
+				const { data, error } = await supabase
+					.from('StockAcce')
+					.select('*')
+					.eq('code', barcode);
+				stockItem = data?.[0];
+				console.log(stockItem);
+				if (stockItem) {
+					setCurrentBarcodeData(stockItem);
+					setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
+				}
+				//  else {
+				// 	setCurrentBarcodeData(null);
+				// 	setSelectedProduct('');
+				// }
+			}
+		} catch (error) {
+			console.error('Error looking up barcode:', error);
+			setCurrentBarcodeData(null);
+		}
+	};
 	const handleBarcodeKeyPress = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') {
 			if (currentBarcodeData && quantity > 0) {
@@ -1259,8 +1255,16 @@ function index() {
 										type='text'
 										placeholder='Enter barcode...'
 										className='col-12'
-										onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-											handleBarcodeChange(e.target.value);
+										onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+											setBarcodeInput(e.target.value);
+											if (e.target.value.length === 10) {
+												await handleBarcodeChange1(e.target.value);
+											} else if (e.target.value.length === 6) {
+												await handleBarcodeChange(e.target.value);
+											} else {
+												setCurrentBarcodeData(null);
+												setSelectedProduct('');
+											}
 										}}
 										onKeyDown={handleBarcodeKeyPress}
 										value={barcodeInput}
