@@ -985,7 +985,16 @@ function index() {
 						.select('*')
 						.eq('code', barcode);
 					stockItem = data?.[0];
+					console.log(stockItem);
+					if (stockItem) {
+						setCurrentBarcodeData(stockItem);
+						setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
+					} else {
+						setCurrentBarcodeData(null);
+						setSelectedProduct('');
+					}
 				}
+
 
 				
 			} catch (error) {
