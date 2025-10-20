@@ -57,6 +57,7 @@ function index() {
 	const dropdownRef = useRef<HTMLInputElement>(null);
 	const quantityRef = useRef<HTMLInputElement>(null);
 	const discountRef = useRef<HTMLInputElement>(null);
+	const contactRef = useRef<HTMLInputElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const nameRef = useRef<HTMLInputElement>(null);
 	const addRef = useRef<any>(null);
@@ -380,9 +381,51 @@ function index() {
 			}
 			e.preventDefault();
 		}
+		if (e.key === 'Enter') {
+			if (contactRef.current) {
+				contactRef.current.focus();
+			}
+			e.preventDefault();
+		}
 		if (e.key === 'ArrowDown') {
-			if (endRef.current) {
-				endRef.current.focus();
+			if (contactRef.current) {
+				contactRef.current.focus();
+			}
+			e.preventDefault();
+		}
+	};
+
+	const contactchange = (e: React.KeyboardEvent) => {
+		if (e.key === 'ArrowUp') {
+			if (discountRef.current) {
+				discountRef.current.focus();
+			}
+			e.preventDefault();
+		}
+		if (e.key === 'ArrowDown') {
+			if (nameRef.current) {
+				nameRef.current.focus();
+			}
+			e.preventDefault();
+		}
+		if (e.key === 'Enter') {
+			if (name) {
+				addbill();
+			} else {
+				if (nameRef.current) {
+					nameRef.current.focus();
+				}
+				e.preventDefault();
+			}
+		}
+	};
+	const namechange = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			addbill();
+		}
+		if (e.key === 'ArrowUp') {
+			if (contactRef.current) {
+				contactRef.current.focus();
 			}
 			e.preventDefault();
 		}
@@ -959,7 +1002,7 @@ function index() {
 			.from('StockAcce')
 			.select('*')
 			.eq('code', last6Digits);
-console.log(data);
+		console.log(data);
 		if (error) {
 			console.error('Supabase Error:', error);
 		} else if (data && data.length > 0) {
@@ -967,7 +1010,7 @@ console.log(data);
 			if (stockItem) {
 				setCurrentBarcodeData(stockItem);
 				setSelectedProduct(stockItem.barcode); // Use the actual barcode from stockItem
-			} 
+			}
 			// else {
 			// 	setCurrentBarcodeData(null);
 			// 	setSelectedProduct('');
@@ -1006,9 +1049,7 @@ console.log(data);
 	const handleBarcodeKeyPress = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') {
 			if (currentBarcodeData && quantity > 0) {
-				if (quantityRef.current) {
-					quantityRef.current.focus();
-				}
+				handlePopupOk();
 			} else if (!currentBarcodeData && barcodeInput.length >= 4) {
 				Swal.fire('Error', 'Barcode not found in inventory.', 'error');
 			}
@@ -1255,7 +1296,9 @@ console.log(data);
 										type='text'
 										placeholder='Enter barcode...'
 										className='col-12'
-										onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+										onChange={async (
+											e: React.ChangeEvent<HTMLInputElement>,
+										) => {
 											setBarcodeInput(e.target.value);
 											if (e.target.value.length === 10) {
 												await handleBarcodeChange1(e.target.value);
@@ -1337,6 +1380,8 @@ console.log(data);
 								</FormGroup>
 								<FormGroup label='Contact Number' className='col-12 mt-3'>
 									<Input
+										ref={contactRef}
+										onKeyDown={contactchange}
 										type='number'
 										value={contact}
 										min={0}
@@ -1354,6 +1399,7 @@ console.log(data);
 										type='text'
 										value={name}
 										min={0}
+										onKeyDown={namechange}
 										onChange={(e: any) => {
 											setName(e.target.value);
 										}}
