@@ -17,7 +17,7 @@ import SubHeader, {
 import Icon from '../../../components/icon/Icon';
 import Input from '../../../components/bootstrap/forms/Input';
 import Accessory from '../../../components/accessory';
-import { useGetAccessoryBillsQuery } from '../../../redux/slices/accessoryBillApiSlice';
+import { supabase } from '../../../lib/supabase';
 
 interface Orders {
 	id: string;
@@ -32,14 +32,15 @@ interface Orders {
 const Index: React.FC = () => {
 	const [searchyear, setSearchyear] = useState<number>(new Date().getFullYear());
 	const [searchmonth, setSearchmonth] = useState<string>('');
-	const [searchDate, setSearchDate] = useState<string>('');
+	const [searchDate, setSearchDate] = useState<string>(new Date().toISOString().split('T')[0]); // Set to today's date in YYYY-MM-DD format
 	const [data, setData] = useState<any[]>([]);
 	const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
 	const [expandedRow, setExpandedRow] = useState(null);
 	const [formStatus, setFormStatus] = useState<boolean>(false);
 	const [searchTerm, setSearchTerm] = useState(''); // State for search term
-	
-	const { data: accessoryBills, isLoading, isError, refetch } = useGetAccessoryBillsQuery(undefined);
+	const [accessoryBills, setAccessoryBills] = useState<any[]>([]);
+	const [isLoading, setIsLoading] = useState<boolean>(false);
+	const [isError, setIsError] = useState<boolean>(false);
 	
 	const toggleRow = (index: any) => {
 		setExpandedRow(expandedRow === index ? null : index);
@@ -63,58 +64,17 @@ const Index: React.FC = () => {
 		};
 	}, []);
 
+	// Fetch bills from Supabase on mount and when date changes
 	useEffect(() => {
-		const filterOrdersByDate = () => {
-			if (!accessoryBills) return [];
-			
-			console.log('Filtering bills with date:', searchDate, 'month:', searchmonth);
-			
-			// If no filters are applied, return all bills
-			if (!searchDate && !searchmonth) {
-				return accessoryBills;
-			}
-			
-			return accessoryBills.filter((order: any) => {
-				try {
-					const orderDate = new Date(order.date);
-					const orderMonth = orderDate.toLocaleString('default', { month: 'short' });
-					
-					if (searchDate) {
-						const formattedSearchDate = new Date(searchDate).toDateString();
-						const formattedOrderDate = new Date(order.date).toDateString();
-						
-						console.log(`Comparing dates: ${formattedOrderDate} with ${formattedSearchDate}`);
-						
-						if (formattedOrderDate !== formattedSearchDate) {
-							return false;
-						}
-					}
-					
-					if (searchmonth && orderMonth !== searchmonth) {
-						return false;
-					}
-					
-					return true;
-				} catch (error) {
-					console.error('Error filtering order:', order, error);
-					return true; // Include records that cause errors in filtering
-				}
-			});
-		};
+		fetchBills();
+	}, [searchDate]);
 
-		setFilteredOrders(filterOrdersByDate());
-	}, [accessoryBills, searchyear, searchmonth, searchDate]);
-
-	// Add more explicit debugging for accessoryBills
+	// Update filteredOrders when accessoryBills changes (from fetchBills)
 	useEffect(() => {
-		console.log('Accessory bills from Supabase:', accessoryBills);
-		
-		if (!accessoryBills || accessoryBills.length === 0) {
-			console.log('No accessory bills found in the response');
-		} else {
-			console.log('First accessory bill:', accessoryBills[0]);
-		}
+		setFilteredOrders(accessoryBills);
 	}, [accessoryBills]);
+
+
 
 	const handleExport = (format: any) => {
 		if (format === 'csv') {
@@ -185,8 +145,30 @@ const Index: React.FC = () => {
 		}
 	};
 	
+	const fetchBills = async () => {
+		setIsLoading(true);
+		setIsError(false);
+		try {
+			let query = supabase.from('accessorybill').select('*').eq('date', searchDate);
+
+			// Filter by date if searchDate is selected
+		
+
+			const { data, error } = await query.order('id', { ascending: false });
+
+			if (error) throw error;
+			setAccessoryBills(data || []);
+			setFilteredOrders(data || []);
+		} catch (error) {
+			console.error('Error fetching accessory bills:', error);
+			setIsError(true);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
 	const reloadPage = () => {
-		refetch();
+		fetchBills();
 	};
 	
 	return (
