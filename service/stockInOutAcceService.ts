@@ -84,45 +84,20 @@ export const createstockIn = async (values: any) => {
 export const getstockIns = async () => {
 	const { data, error } = await supabase.from('StockAcce').select('*').eq('status', true);
 
-	const { data: firstBatch, error: err1 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(0, 999) // First 1000 rows
-		.eq('status', true);
-	const { data: secondBatch, error: err2 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(1000, 1999)
-		.eq('status', true); // Next 800 rows
-	const { data: theredBatch, error: err3 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(2000, 2999)
-		.eq('status', true);
-	const { data: forthBatch, error: err4 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(3000, 3999)
-		.eq('status', true);
-    const { data: fithBatch, error: err5 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(4000, 4999)
-		.eq('status', true);
-	const { data: sixthBatch, error: err6 } = await supabase
-		.from('StockAcce')
-		.select('*')
-		.range(5000, 5999)
-		.eq('status', true);
+	// const { data: firstBatch, error: err1 } = await supabase
+	// 	.from('StockAcce')
+	// 	.select('*')
+	// 	.eq('status', true);
+	
  // Combine both batches
- const allData = [...(firstBatch || []), ...(secondBatch || []),...(theredBatch || []),...(forthBatch || []),...(fithBatch|| []),...(sixthBatch|| [])		];
+//  const allData = [...(firstBatch || []), ...(secondBatch || []),...(theredBatch || []),...(forthBatch || []),...(fithBatch|| []),...(sixthBatch|| [])		];
 
 	if (error) {
 		console.error('Error fetching stock ins:', error);
 		return [];
 	}
-console.log(allData.length)
-	return allData;
+console.log(data.length)
+	return data;
 };
 
 // Get Stock In Entry by ID
