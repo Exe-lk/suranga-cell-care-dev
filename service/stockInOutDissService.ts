@@ -237,30 +237,92 @@ export const createstockIn = async (values: any) => {
 	  throw error;
 	}
   };
-  export const getstockInByDate = async (date: string, searchTerm: any) => {
-	let query = supabase
-	  .from('Stock')
-	  .select('*')
-	  .eq('status', true);
-	
-	// Add date filter if provided
-	if (date) {
-	  query = query.eq('date', date);
+  export const getstockInByDate = async (date: string, searchTerm: any, limit: number = 500, offset: number = 0) => {
+	// #region agent log
+	const serviceStartTime = Date.now();
+	const logId = `[${Date.now()}]`;
+	console.log(`${logId} getstockInByDate entry`, { date, searchTerm, limit, offset });
+	fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:240',message:'getstockInByDate entry',data:{date,searchTerm,limit,offset},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C,D'})}).catch(()=>{});
+	// #endregion
+	try {
+		// Build count query to get total records
+		let countQuery = supabase
+		  .from('Stock')
+		  .select('*', { count: 'exact', head: true })
+		  .eq('status', true);
+		
+		// Build data query with pagination
+		let dataQuery = supabase
+		  .from('Stock')
+		  .select('*')
+		  .eq('status', true);
+		
+		// Add date filter if provided
+		if (date) {
+		  countQuery = countQuery.eq('date', date);
+		  dataQuery = dataQuery.eq('date', date);
+		}
+		
+		// Add search filter if provided
+		if (searchTerm) {
+		  const searchFilter = `barcode.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,suppName.ilike.%${searchTerm}%`;
+		  countQuery = countQuery.or(searchFilter);
+		  dataQuery = dataQuery.or(searchFilter);
+		}
+		
+		// Apply pagination
+		dataQuery = dataQuery
+		  .order('code', { ascending: false })
+		  .range(offset, offset + limit - 1);
+		
+		// #region agent log
+		console.log(`${logId} Before Supabase query execution`, { hasDate: !!date, hasSearchTerm: !!searchTerm, limit, offset });
+		fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:256',message:'Before Supabase query execution',data:{hasDate:!!date,hasSearchTerm:!!searchTerm,limit,offset},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
+		// #endregion
+	  
+		// Execute both queries
+		const [dataResult, countResult] = await Promise.all([
+			dataQuery,
+			countQuery
+		]);
+		
+		const { data, error } = dataResult;
+		const { count, error: countError } = countResult;
+		
+		// #region agent log
+		const elapsed = Date.now() - serviceStartTime;
+		console.log(`${logId} After Supabase query execution`, { hasError: !!error, errorMessage: error?.message, dataLength: data?.length || 0, totalCount: count || 0, elapsed });
+		fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:258',message:'After Supabase query execution',data:{hasError:!!error,errorMessage:error?.message,dataLength:data?.length||0,totalCount:count||0,elapsed:Date.now()-serviceStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
+		// #endregion
+	  
+		if (error) {
+		  // #region agent log
+		  console.error(`${logId} Supabase query error:`, { errorCode: error.code, errorMessage: error.message, errorDetails: error.details, elapsed });
+		  fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:260',message:'Supabase query error',data:{errorCode:error.code,errorMessage:error.message,errorDetails:error.details,elapsed:Date.now()-serviceStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+		  // #endregion
+		  console.error('Error fetching stock by date with search:', error);
+		  return { data: [], totalCount: 0 };
+		}
+		
+		if (countError) {
+		  console.error('Error fetching total count:', countError);
+		}
+		
+		// #region agent log
+		console.log(`${logId} getstockInByDate success exit`, { dataLength: data?.length || 0, totalCount: count || 0, elapsed });
+		fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:265',message:'getstockInByDate success exit',data:{dataLength:data?.length||0,totalCount:count||0,elapsed:Date.now()-serviceStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,D'})}).catch(()=>{});
+		// #endregion
+	  
+		return { data: data || [], totalCount: count || 0 };
+	} catch (error) {
+		// #region agent log
+		const elapsed = Date.now() - serviceStartTime;
+		console.error(`${logId} getstockInByDate exception:`, { errorMessage: error instanceof Error ? error.message : String(error), errorStack: error instanceof Error ? error.stack : undefined, elapsed });
+		fetch('http://127.0.0.1:7242/ingest/32556381-b070-455f-ac8b-feae48209138',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stockInOutDissService.ts:270',message:'getstockInByDate exception',data:{errorMessage:error instanceof Error?error.message:String(error),errorStack:error instanceof Error?error.stack:undefined,elapsed:Date.now()-serviceStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+		// #endregion
+		console.error('Exception in getstockInByDate:', error);
+		throw error;
 	}
-	
-	// Add search filter if provided
-	if (searchTerm) {
-	  query = query.or(`barcode.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,suppName.ilike.%${searchTerm}%`);
-	}
-  
-	const { data, error } = await query;
-  
-	if (error) {
-	  console.error('Error fetching stock by date with search:', error);
-	  return [];
-	}
-  
-	return data;
   };
   export const getAllSubStockData = async () => {
 	try {

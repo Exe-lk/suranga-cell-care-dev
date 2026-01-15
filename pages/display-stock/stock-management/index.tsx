@@ -45,9 +45,24 @@ const Index: NextPage = () => {
 	const [id, setId] = useState<string>('');
 	const today = new Date();
 	const [startDate, setStartDate] = useState<string>('');  // Empty string to not filter by date
-	const { data: StockInOuts, error, isLoading, refetch } = useGetStockInOutByDateQuery({ startDate, searchtearm: debouncedSearchTerm });
 	const [currentPage, setCurrentPage] = useState<number>(1);
-	const [perPage, setPerPage] = useState<number>(PER_COUNT['10000']);
+	const [perPage, setPerPage] = useState<number>(500);  // Default to 500 records per page
+	
+	// Reset to page 1 when perPage changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [perPage]);
+	// Calculate offset based on current page
+	const offset = (currentPage - 1) * perPage;
+	const { data: StockInOutsResponse, error, isLoading, refetch } = useGetStockInOutByDateQuery({ 
+		startDate, 
+		searchtearm: debouncedSearchTerm,
+		limit: perPage,
+		offset: offset
+	});
+	// Extract data and totalCount from response
+	const StockInOuts = StockInOutsResponse?.data || [];
+	const totalCount = StockInOutsResponse?.totalCount || 0;
 	const [updateStockInOut] = useUpdateStockInOutMutation();
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 	const [showLowStockAlert, setShowLowStockAlert] = useState(false);
@@ -108,6 +123,8 @@ console.log(StockInOuts);
 				setSelectedModel('');
 				setFilteredSearchTerm(searchTerm);
 			}
+			// Reset to page 1 when search term changes
+			setCurrentPage(1);
 			// This will trigger a new API call with the updated search term
 			// Search is performed directly on the database rather than client-side filtering
 		}, 500);
@@ -115,12 +132,10 @@ console.log(StockInOuts);
 		return () => clearTimeout(timer);
 	}, [searchTerm]);
 
-	// Effect to refetch data when startDate changes
+	// Effect to reset page when startDate changes
 	useEffect(() => {
-		if (startDate) {
-			refetch();
-		}
-	}, [startDate, refetch]);
+		setCurrentPage(1);
+	}, [startDate]);
 
 	// Check for items at or below reorder level
 	useEffect(() => {
@@ -708,13 +723,12 @@ console.log(StockInOuts);
 										}
 										{
 											StockInOuts &&
-											dataPagination(StockInOuts, currentPage, perPage)
+											StockInOuts
 												.filter((stockInOut: any) =>
 													selectedUsers.length > 0
 														? selectedUsers.includes(stockInOut.stock)
 														: true,
 												)
-												.sort((a: any, b: any) => b.code - a.code)
 												.map((brand: any, index: any) => (
 													<tr key={index}>
 														<td>{brand.date}</td>
@@ -741,6 +755,7 @@ console.log(StockInOuts);
 								currentPage={currentPage}
 								perPage={perPage}
 								setPerPage={setPerPage}
+								totalCount={totalCount}
 							/>
 						</Card>
 					</div>
